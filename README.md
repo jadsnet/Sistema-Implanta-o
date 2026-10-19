@@ -15,3 +15,7 @@ Sirva a pasta por um servidor HTTP local ou publique no GitHub Pages. Por exempl
 - Clicar na linha apenas visualiza os detalhes; o botão **Adotar** abre a tela de adoção na mesma aba.
 - Adoção permite preencher modelo/serial, dados de rede e dados do técnico e salva os dados no navegador.
 - Indicador usa o nome **Migradas** em lugar de Concluídas.
+
+
+## Organização do pacote
+O ZIP contém uma única cópia de cada arquivo na raiz: `index.html`, `style.css`, `app.js`, `data.json` e `README.md`. Os cartões de indicadores usam etiquetas coloridas sobrepostas à lateral superior esquerda, com emojis centralizados e sombra suave.
