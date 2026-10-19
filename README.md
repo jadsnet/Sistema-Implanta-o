@@ -1,24 +1,17 @@
 # Gestão de Implantação
 
-Reconstrução inicial da aplicação a partir dos dados exportados do Cloud e das telas fornecidas.
+Aplicação web estática com os arquivos separados:
+- `index.html`: estrutura da interface.
+- `style.css`: tema, cartões, linhas de atividade e layout responsivo.
+- `app.js`: navegação, filtros de data, busca, adoção e runbook.
+- `data.json`: dados importados originais.
 
-## Publicar no GitHub Pages
-1. Crie um repositório GitHub.
-2. Envie `index.html` e `data.json` para a raiz do repositório.
-3. Em Settings → Pages, escolha Deploy from a branch, selecione `main` e `/ (root)`.
-4. Abra a URL publicada.
+## Executar
+Sirva a pasta por um servidor HTTP local ou publique no GitHub Pages. Por exemplo, com Python instalado, execute `python -m http.server` dentro da pasta e acesse `http://localhost:8000`.
 
-Também é possível testar localmente usando um servidor estático, por exemplo `python -m http.server 8000`, e acessar `http://localhost:8000`.
-
-## Funcionalidades
-- Tela de seleção de projeto e painel de atividades.
-- Pesquisa de atividades, visualização dos dados e alteração de status.
-- Atribuição de analista, início, conclusão e motivo de quebra.
-- Runbook com etapas e observações por atividade.
-- Histórico de ações e exportação CSV.
-- Cadastro de projetos e usuários.
-- Importação de atividades CSV, exportação CSV e importação de modelo de runbook JSON.
-- Dados iniciais extraídos do arquivo exportado; alterações ficam no `localStorage` do navegador.
-
-## Limitações importantes
-Esta versão é um front-end estático: não possui autenticação segura nem banco de dados compartilhado entre analistas. O `localStorage` é específico de cada navegador/dispositivo. Para uso real por uma equipe, conecte a aplicação a uma API e banco compartilhado (por exemplo Supabase) e implemente autenticação e permissões. Não publique dados pessoais ou operacionais sensíveis em repositório público.
+## Comportamentos incluídos
+- Filtros Hoje, Outro dia (com seletor de data) e Total geral.
+- Busca inicialmente vazia; resultados aparecem após digitar ID de link ou ID VGR.
+- Clicar na linha apenas visualiza os detalhes; o botão **Adotar** abre a tela de adoção na mesma aba.
+- Adoção permite preencher modelo/serial, dados de rede e dados do técnico e salva os dados no navegador.
+- Indicador usa o nome **Migradas** em lugar de Concluídas.
