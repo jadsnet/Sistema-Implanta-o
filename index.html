@@ -43,6 +43,83 @@ input,select,textarea,.field input,.field select,.field textarea{background:#102
 .metric-red .metric-icon{color:#ff9aaa;background:linear-gradient(145deg,#f46a7c,#c82d48);border-color:#ff8496;box-shadow:inset 0 3px 4px #ffffff38,inset 0 -5px 8px #7e132955,0 8px 16px #0006;text-shadow:1px 2px 1px #8d1b30,-1px -1px 1px #ffd0d788}
 @media(max-width:1200px){.project-dashboard .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:26px 20px}.project-dashboard .stat{min-height:150px;padding-left:150px;border-radius:32px}.metric-icon{width:96px;height:96px;left:24px;top:-18px;border-radius:29px;font-size:40px}.project-dashboard .stat>div>span{font-size:clamp(14px,2vw,24px)}.project-dashboard .stat b{font-size:clamp(28px,3vw,48px)}}
 @media(max-width:700px){.project-dashboard .stats{grid-template-columns:1fr;gap:24px;padding-top:18px}.project-dashboard .stat{min-height:130px;padding:20px 18px 18px 130px;border-radius:28px}.metric-icon{width:82px;height:82px;left:20px;top:-14px;border-radius:25px;font-size:34px}.project-dashboard .stat>div>span{font-size:17px}.project-dashboard .stat b{font-size:34px;margin-top:5px}}
+
+
+/* Ajuste compacto dos cartões de indicadores conforme a referência mais recente */
+.project-dashboard .stats{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:15px 15px;
+  padding:12px 0 0;
+  overflow:visible;
+}
+.project-dashboard .stat{
+  min-width:0;
+  min-height:90px;
+  height:auto;
+  padding:12px 12px 10px 92px;
+  border:2px solid #172b43;
+  border-radius:23px;
+  background:linear-gradient(145deg,#0d1b2b 0%,#0b1928 100%);
+  position:relative;
+  display:flex;
+  align-items:center;
+  overflow:visible;
+}
+.project-dashboard .stat>div{min-width:0;width:100%}
+.project-dashboard .stat>div>span{
+  display:block;
+  font-size:clamp(12px,1.05vw,17px);
+  line-height:1.2;
+  color:#91a9ca;
+  font-weight:400;
+  white-space:normal;
+}
+.project-dashboard .stat b{
+  display:block;
+  margin:4px 0 0;
+  font-size:clamp(24px,2vw,34px);
+  line-height:1;
+  font-weight:800;
+  color:#f0f4ff;
+}
+.project-dashboard .metric-icon{
+  position:absolute;
+  left:15px;
+  top:-12px;
+  width:60px;
+  height:60px;
+  border-radius:19px;
+  display:grid;
+  place-items:center;
+  font-size:25px;
+  font-weight:800;
+  z-index:1;
+  box-shadow:inset 0 2px 3px #ffffff35,inset 0 -3px 5px #0003,0 4px 8px #0005;
+}
+.project-dashboard .metric-blue .metric-icon{color:#8bb8ff;background:linear-gradient(145deg,#4387ff,#245ed0);border-color:#5792ff;text-shadow:1px 1px 1px #123f9b,-1px -1px 1px #b8d3ff88}
+.project-dashboard .metric-purple .metric-icon{color:#c4a5ff;background:linear-gradient(145deg,#a174ff,#7642dc);border-color:#b18aff;text-shadow:1px 1px 1px #4e299a,-1px -1px 1px #e0d0ff88}
+.project-dashboard .metric-yellow .metric-icon{color:#ffdb70;background:linear-gradient(145deg,#f7c342,#d19408);border-color:#ffda6b;text-shadow:1px 1px 1px #8d5c00,-1px -1px 1px #fff0b188}
+.project-dashboard .metric-green .metric-icon{color:#70e4b2;background:linear-gradient(145deg,#35c58b,#078756);border-color:#56dba7;text-shadow:1px 1px 1px #00643e,-1px -1px 1px #b5ffdc88}
+.project-dashboard .metric-red .metric-icon{color:#ff9aaa;background:linear-gradient(145deg,#f46a7c,#c82d48);border-color:#ff8496;text-shadow:1px 1px 1px #8d1b30,-1px -1px 1px #ffd0d788}
+@media(max-width:900px){
+ .project-dashboard .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:17px 13px}
+ .project-dashboard .stat{min-height:82px;padding-left:79px;border-radius:19px}
+ .project-dashboard .metric-icon{width:52px;height:52px;left:12px;top:-9px;border-radius:16px;font-size:22px}
+ .project-dashboard .stat>div>span{font-size:13px}
+ .project-dashboard .stat b{font-size:27px}
+}
+@media(max-width:520px){
+ .project-dashboard .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 10px;padding-top:10px}
+ .project-dashboard .stat{min-height:75px;padding:11px 8px 9px 63px;border-radius:16px}
+ .project-dashboard .metric-icon{width:43px;height:43px;left:9px;top:-7px;border-radius:13px;font-size:18px}
+ .project-dashboard .stat>div>span{font-size:11px;line-height:1.15}
+ .project-dashboard .stat b{font-size:23px;margin-top:4px}
+}
+@media(max-width:360px){
+ .project-dashboard .stats{grid-template-columns:1fr}
+ .project-dashboard .stat{min-height:70px;padding-left:65px}
+}
+
 </style></head><body><div class="app"><aside class="sidebar"><div><div class="brand">IMPLANTAÇÃO</div><div class="brand2">Gestão de Projetos</div></div><button class="nav active" data-page="home">⌂ &nbsp; Início</button><button class="nav" data-page="runbook">▤ &nbsp; Runbook</button><button class="nav" data-page="logs">☷ &nbsp; Log</button><button class="nav" data-page="admin">⚙ &nbsp; Painel do administrador</button></aside><main class="main"><div class="topline"><div><div class="eyebrow" id="sectionEyebrow">PROJETOS</div><h1 class="title" id="pageTitle">Selecione um projeto</h1></div><div class="watermark" id="watermark"></div></div><div id="appContent"></div></main></div><div class="toast" id="toast"></div>
 <script>
 const $=s=>document.querySelector(s);let DB={},page='home',projectId=null,selectedActivity=null,adminTab='Projetos',filterStatus='Todos';
