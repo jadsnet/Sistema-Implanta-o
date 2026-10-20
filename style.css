@@ -85,3 +85,15 @@ button.secondary,.tabs button{box-shadow:0 4px 12px #00000020;}
 .status.Quebra{background:#3c1e2b;color:#ff8796}
 .status.Migrada{background:#123a34;color:#4be0ae}
 @media(max-width:800px){.sidebar{width:auto;flex-direction:row;align-items:center;overflow-x:auto;padding:8px}.sidebar>div:first-child,.nav-separator{display:none}.nav{min-width:0;min-height:42px;padding:6px 9px;margin:0 2px;flex:1}.nav-icon{flex-basis:29px;width:29px;height:29px}.nav>span:last-child{white-space:nowrap}.top-actions{width:100%;justify-content:space-between}.user-picker select{max-width:140px}}
+
+/* Importação de modelos por projeto */
+.project-row{background:#13263b!important;border:1px solid #29425d!important;border-radius:12px;padding:18px!important;margin:10px 0;transition:background .18s,border-color .18s}
+.project-row:hover{background:#19314b!important;border-color:#3b82f6!important}
+.import-preview{margin:12px 0 16px;padding:12px 14px;border:1px solid #29425d;border-radius:10px;background:#0a1727;color:#dbeafe;overflow-wrap:anywhere}
+.import-preview:empty{display:none}
+.import-preview button{margin-top:10px;background:#3b82f6;color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer}
+.import-preview button:hover{background:#2563eb}
+.filelabel{display:inline-flex;align-items:center;gap:10px;max-width:100%;padding:10px 14px;background:#142a42;border:1px solid #29425d;border-radius:9px;color:#f8fafc;cursor:pointer}
+.filelabel input[type=file]{display:block;max-width:100%;margin-top:8px;color:#cbd5e1}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.tabs button{border-radius:9px}
