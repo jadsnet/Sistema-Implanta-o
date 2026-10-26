@@ -302,3 +302,48 @@ input:focus,select:focus,textarea:focus{outline:2px solid rgba(187,125,247,.52)!
   background:#302b1c!important;color:#ffd26d!important;
 }
 /* Manter verde para Migrada e laranja para Quebra nos indicadores 3D. */
+
+
+/* Tema Vivo revisado: contraste dos paineis, status e alternancia claro/escuro */
+:root{--bg:#170e24;--panel:#291a39;--panel2:#302040;--text:#f7efff;--muted:#c9b2da}
+html:not([data-theme="light"]) body,html:not([data-theme="light"]) .main{background:#170e24!important;color:#f7efff}
+html:not([data-theme="light"]) .sidebar{background:linear-gradient(180deg,#251633,#1f122e)!important}
+html:not([data-theme="light"]) .panel,html:not([data-theme="light"]) .activity-summary,html:not([data-theme="light"]) .info-section,html:not([data-theme="light"]) .runbook-search,html:not([data-theme="light"]) .runbook-line,html:not([data-theme="light"]) .activity-line,html:not([data-theme="light"]) .evidence-section,html:not([data-theme="light"]) .runbook-detail .evidence-section{background:#291a39!important}
+html:not([data-theme="light"]) .stat,html:not([data-theme="light"]) .project{background:#302040!important}
+html:not([data-theme="light"]) input,html:not([data-theme="light"]) select,html:not([data-theme="light"]) textarea{background:#483058!important}
+/* Status: os tres estados de andamento compartilham o amarelo de Pendente */
+.status.Pendente,.status.Em,.status.Contatando,.status.Iniciando,.status.Finalizando{background:#3b321f!important;color:#ffd26d!important}
+.status.Migrada{background:#163f30!important;color:#6ce4a4!important}
+.status.Quebra{background:#502a22!important;color:#ffad79!important}
+.theme-toggle{position:relative;display:inline-flex;align-items:center;justify-content:space-between;gap:8px;min-width:74px;height:36px;padding:5px 11px!important;border-radius:22px!important;background:#3c2752!important;color:#e6c9ff!important;box-shadow:0 4px 12px #0003!important;flex-shrink:0}
+.theme-toggle span{font-size:19px;line-height:1;opacity:.4;transition:opacity .2s,transform .2s}
+html:not([data-theme="light"]) .theme-moon,html[data-theme="light"] .theme-sun{opacity:1;transform:scale(1.1)}
+.top-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+/* Modo claro, com marca d'agua fixa discreta do simbolo fornecido */
+html[data-theme="light"]{--bg:#f2eaf7;--panel:#fffaff;--panel2:#efe1f5;--text:#342043;--muted:#725c83;--blue:#8025ba}
+html[data-theme="light"] body,html[data-theme="light"] .main{background:#f2eaf7!important;color:#342043!important}
+html[data-theme="light"] .main{position:relative;isolation:isolate}
+html[data-theme="light"] .main::before{content:"";position:fixed;z-index:-1;pointer-events:none;width:min(45vw,520px);height:min(45vw,520px);right:8%;top:23%;background:url('favicon.png') center/contain no-repeat;opacity:.035;filter:saturate(.8)}
+html[data-theme="light"] .sidebar{background:linear-gradient(180deg,#e8d8f1,#e3d1ed)!important;color:#38244a!important}
+html[data-theme="light"] .panel,html[data-theme="light"] .activity-summary,html[data-theme="light"] .info-section,html[data-theme="light"] .runbook-search,html[data-theme="light"] .runbook-line,html[data-theme="light"] .activity-line,html[data-theme="light"] .evidence-section,html[data-theme="light"] .runbook-detail .evidence-section{background:#fffaff!important;color:#342043!important;box-shadow:0 7px 22px #4d246018!important}
+html[data-theme="light"] .stat,html[data-theme="light"] .project{background:#f9f1fc!important;color:#342043!important}
+html[data-theme="light"] .runbook-detail .evidence-card{background:#f6eaf9!important;color:#342043!important}
+html[data-theme="light"] .runbook-detail .evidence-drop,html[data-theme="light"] .crop-editor{background:#ead9f1!important;color:#342043!important}
+html[data-theme="light"] input,html[data-theme="light"] select,html[data-theme="light"] textarea,html[data-theme="light"] .field input,html[data-theme="light"] .field select,html[data-theme="light"] .field textarea,html[data-theme="light"] .info-grid .field input{background:#edddf4!important;color:#392449!important;border:0!important}
+html[data-theme="light"] .nav,html[data-theme="light"] .nav:not(.active){background:#eadbf3!important;color:#4a345c!important}
+html[data-theme="light"] .nav.active,html[data-theme="light"] .nav:hover{background:#d6b9e9!important;color:#3b1d52!important}
+html[data-theme="light"] .nav-icon{background:#d7b7e9!important;color:#65218d!important}
+html[data-theme="light"] .nav.active .nav-icon{background:#b27bd3!important;color:#3b1558!important}
+html[data-theme="light"] .floating-title{background:#e4cbee!important;color:#3b2451!important}
+html[data-theme="light"] .report-dialog,html[data-theme="light"] .activity-modal{background:#fffaff!important;color:#342043!important}
+html[data-theme="light"] .report-columns label,html[data-theme="light"] .tabs button,html[data-theme="light"] .date-buttons button:not(.active),html[data-theme="light"] button.secondary,html[data-theme="light"] .filelabel,html[data-theme="light"] .report-trigger{background:#ead8f3!important;color:#482b5c!important}
+html[data-theme="light"] .substats span{background:#e7d5ef!important;color:#5b4371!important}
+html[data-theme="light"] .substats b,html[data-theme="light"] .stat b{color:#392449!important}
+html[data-theme="light"] .muted,html[data-theme="light"] .sub,html[data-theme="light"] .field label,html[data-theme="light"] .stat span{color:#725c83!important}
+html[data-theme="light"] .title,html[data-theme="light"] h1,html[data-theme="light"] h2,html[data-theme="light"] h3,html[data-theme="light"] .brand2{color:#342043!important}
+html[data-theme="light"] .theme-toggle{background:#dfc4ee!important;color:#6d249e!important}
+html[data-theme="light"] .watermark{color:#c7a7d8!important}
+html[data-theme="light"] .status.Pendente,html[data-theme="light"] .status.Em,html[data-theme="light"] .status.Contatando,html[data-theme="light"] .status.Iniciando,html[data-theme="light"] .status.Finalizando{background:#f5e7c5!important;color:#7c5205!important}
+html[data-theme="light"] .status.Migrada{background:#d7f4e4!important;color:#176640!important}
+html[data-theme="light"] .status.Quebra{background:#ffe2d3!important;color:#9b431d!important}
+@media(max-width:700px){.theme-toggle{min-width:66px;height:32px}.top-actions{gap:6px}}
