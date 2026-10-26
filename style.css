@@ -189,3 +189,16 @@ button.secondary{background:#122a44}
 /* Reflexo fiel ao elemento .gl enviado: camada translúcida sobre a cor existente. */
 .stat .stat-emoji{isolation:isolate;overflow:hidden}
 .stat .stat-emoji .gl{position:absolute;inset:0;display:block;pointer-events:none;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.2),rgba(255,255,255,0) 50%,rgba(0,0,0,.15));z-index:1}
+
+
+/* Iconografia monocromática esculpida: desenho da mesma cor da placa. */
+.stat:nth-child(1){--icon-tone:#2870e8}
+.stat:nth-child(2){--icon-tone:#8149df}
+.stat:nth-child(3){--icon-tone:#d7a018}
+.stat:nth-child(4){--icon-tone:#159b68}
+.stat .stat-emoji .emboss-icon{width:28px;height:28px;display:block;position:relative;z-index:2;overflow:visible}
+.emboss-icon g{stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.emboss-icon .emboss-shadow{stroke:rgba(0,0,0,.64);transform:translate(0.8px,1.15px)}
+.emboss-icon .emboss-light{stroke:rgba(255,255,255,.38);transform:translate(-.8px,-1px)}
+.emboss-icon .emboss-face{stroke:var(--icon-tone);filter:drop-shadow(0 1px 1px rgba(0,0,0,.32))}
+@media(max-width:520px){.stat .stat-emoji .emboss-icon{width:23px;height:23px}}
