@@ -461,3 +461,39 @@ html[data-theme="light"] .admin-config{background:#d4bddd!important}
 html[data-theme="light"] .admin-config-section .filelabel,html[data-theme="light"] .admin-config-section .import-preview{background:#b999cd!important}
 html[data-theme="light"] .activity-meta,html[data-theme="light"] .activity-meta .owner,html[data-theme="light"] .activity-meta .elapsed,html[data-theme="light"] .activity-line .owner,html[data-theme="light"] .activity-line .elapsed{color:#39204e!important;opacity:1!important;text-shadow:none!important}
 html[data-theme="light"] .muted,html[data-theme="light"] .sub,html[data-theme="light"] .field label,html[data-theme="light"] .stat span{color:#604373!important}
+
+
+/* Paleta inspirada na referencia fornecida — somente cores, sem alterar layout. */
+html[data-theme="light"]{--bg:#d9c8e8;--panel:#85669f;--panel2:#6d5087;--text:#30203e;--muted:#634c79;--blue:#8627d2}
+html[data-theme="light"] body,html[data-theme="light"] .main{background:linear-gradient(125deg,#dfd0ec 0%,#d4c0e5 60%,#d8c6e9 100%)!important;color:#322040!important}
+html[data-theme="light"] .sidebar{background:linear-gradient(165deg,#67418e,#3c245d 70%,#302047)!important;color:#fff!important;box-shadow:5px 0 24px #44275a25!important}
+html[data-theme="light"] .sidebar .brand,html[data-theme="light"] .sidebar .brand2,html[data-theme="light"] .sidebar .project-profile-name,html[data-theme="light"] .sidebar .project-profile-name strong{color:#fff!important}
+html[data-theme="light"] .sidebar .project-profile-name small{color:#e3d0f2!important}
+html[data-theme="light"] .project-sidebar-profile{background:#69488d!important;box-shadow:0 6px 18px #1d0c3240!important;border-radius:16px!important}
+html[data-theme="light"] .nav,html[data-theme="light"] .nav:not(.active){background:#503071!important;color:#f5eaff!important;box-shadow:0 4px 12px #190b2b35!important}
+html[data-theme="light"] .nav.active,html[data-theme="light"] .nav:hover{background:#8c35d4!important;color:white!important}
+html[data-theme="light"] .nav-icon{background:#714595!important;color:#eee0ff!important}
+html[data-theme="light"] .nav.active .nav-icon{background:#5e2295!important;color:#f5e8ff!important}
+html[data-theme="light"] .panel,html[data-theme="light"] .activity-summary,html[data-theme="light"] .info-section,html[data-theme="light"] .evidence-section,html[data-theme="light"] .runbook-search,html[data-theme="light"] .runbook-detail .evidence-section{background:#896ca2!important;color:#fff!important;box-shadow:0 9px 24px #38204d30!important}
+html[data-theme="light"] .stat,html[data-theme="light"] .project,html[data-theme="light"] .project-row,html[data-theme="light"] .activity-line,html[data-theme="light"] .runbook-line{background:#967ab0!important;color:#fff!important;box-shadow:0 7px 18px #40245035!important}
+html[data-theme="light"] .stat b,html[data-theme="light"] .stat span,html[data-theme="light"] .stat .muted{color:#fff!important}
+html[data-theme="light"] .runbook-detail .evidence-card,html[data-theme="light"] .step-card,html[data-theme="light"] .report-columns label{background:#75568e!important;color:#fff!important}
+html[data-theme="light"] .runbook-detail .evidence-drop,html[data-theme="light"] .crop-editor{background:#684985!important;color:#fff!important}
+html[data-theme="light"] input,html[data-theme="light"] select,html[data-theme="light"] textarea,html[data-theme="light"] .field input,html[data-theme="light"] .field select,html[data-theme="light"] .field textarea,html[data-theme="light"] .info-grid .field input{background:#76548f!important;color:#fff!important;border:0!important}
+html[data-theme="light"] input::placeholder,html[data-theme="light"] textarea::placeholder{color:#dfccec!important;opacity:1}
+html[data-theme="light"] .field label,html[data-theme="light"] .activity-summary .muted,html[data-theme="light"] .info-section .muted,html[data-theme="light"] .activity-summary .sub,html[data-theme="light"] .info-section .sub{color:#ecdbf7!important}
+html[data-theme="light"] .floating-title{background:#61328b!important;color:#fff!important}
+html[data-theme="light"] button.secondary,html[data-theme="light"] .filelabel,html[data-theme="light"] .report-trigger,html[data-theme="light"] .date-buttons button:not(.active),html[data-theme="light"] .tabs button{background:#76519a!important;color:#fff!important;box-shadow:0 4px 12px #3a1a5a25!important}
+html[data-theme="light"] .substats span{background:#a182b9!important;color:#372246!important}
+html[data-theme="light"] .admin-config{background:#9578ac!important}
+html[data-theme="light"] .admin-config-section{background:#76598f!important;color:#fff!important}
+html[data-theme="light"] .admin-config-section .filelabel,html[data-theme="light"] .admin-config-section .import-preview{background:#654880!important;color:#fff!important}
+html[data-theme="light"] .report-dialog,html[data-theme="light"] .activity-modal{background:#74568c!important;color:#fff!important}
+html[data-theme="light"] .activity-meta,html[data-theme="light"] .activity-meta .owner,html[data-theme="light"] .activity-meta .elapsed,html[data-theme="light"] .activity-line .owner,html[data-theme="light"] .activity-line .elapsed{color:#fff!important;opacity:1!important;text-shadow:none!important}
+html[data-theme="light"] .activity-line .muted,html[data-theme="light"] .project-row .muted{color:#e9d7f5!important}
+html[data-theme="light"] .theme-toggle{background:#a36ed1!important;color:#fff!important}
+html[data-theme="light"] .main::before{opacity:.075!important;filter:grayscale(1) sepia(1) hue-rotate(220deg) saturate(1.5)!important}
+html[data-theme="light"] .sidebar::before{content:"";position:absolute;right:-100px;bottom:4%;width:280px;height:280px;background:url('favicon.png') center/contain no-repeat;transform:rotate(-25deg);opacity:.13;pointer-events:none;filter:grayscale(1) brightness(1.5);z-index:0}
+html[data-theme="light"] .sidebar{position:relative;isolation:isolate;overflow:hidden}
+html[data-theme="light"] .sidebar>*{position:relative;z-index:1}
+@media(max-width:800px){html[data-theme="light"] .sidebar::before{display:none}}
