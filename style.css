@@ -181,3 +181,15 @@ button.secondary{background:#122a44}
 .crop-actions label{display:flex;align-items:center;gap:10px;color:#a9bfd9}
 .crop-actions input[type=range]{width:130px;padding:0}
 @media(max-width:700px){.admin-config{padding:15px!important}.admin-config-section{padding:19px 0}}
+
+/* Refinamento solicitado: identidade lateral compacta */
+.sidebar .brand{font-size:10px!important;letter-spacing:1.15px!important;font-weight:700;opacity:.72;margin:3px 8px 4px!important}
+.sidebar .brand2{font-size:13px!important;font-weight:650;line-height:1.25;letter-spacing:0;margin:0 8px 18px!important;color:#c7d8ee}
+
+/* Indicadores: ícones com relevo e cor correspondente à categoria */
+.stats .stat{border:1px solid rgba(119,158,203,.12)!important;box-shadow:0 7px 18px rgba(0,0,0,.19),inset 0 1px 0 rgba(255,255,255,.025)}
+.stats .stat:nth-child(1){--tile-light:#f3c64c;--tile-mid:#e6a918;--tile-dark:#ad7304}
+.stats .stat:nth-child(2){--tile-light:#b28bff;--tile-mid:#8d57e8;--tile-dark:#5e30ba}
+.stats .stat:nth-child(3){--tile-light:#51dfa3;--tile-mid:#1cb77c;--tile-dark:#087b55}
+.stats .stat:nth-child(4){--tile-light:#ff8a96;--tile-mid:#e84f69;--tile-dark:#ac2944}
+.stats .stat .stat-emoji{background:linear-gradient(145deg,var(--tile-light) 0%,var(--tile-mid) 48%,var(--tile-dark) 100%)!important;border:1px solid rgba(255,255,255,.20)!important;box-shadow:inset 1px 2px 2px rgba(255,255,255,.33),inset -2px -3px 4px rgba(0,0,0,.25),0 2px 0 rgba(0,0,0,.22),0 7px 13px rgba(0,0,0,.34),0 0 12px color-mix(in srgb,var(--tile-mid) 20%,transparent)!important;text-shadow:0 1px 2px rgba(0,0,0,.24)}
