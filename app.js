@@ -76,9 +76,8 @@ function activityDetail(id,mode='view'){
  const canEdit=d.analystName===currentUser();
  const field=k=>`<div class="field"><label>${esc(k)}</label><input data-edit="${esc(k)}" value="${esc(val(k))}" ${k==='IP LINK'?'inputmode="decimal" placeholder="0.0.0.0/0" pattern="[0-9./]*"':''} ${canEdit?'':'readonly'}></div>`;
  const groups=[
- ['Equipamento',keys.filter(k=>k!=='IP LINK'&&/equip|modelo|serial|qtd|quantidade|lote|host|network|rede|ip/i.test(k))],
- ['Link',keys.filter(k=>k!=='ID VGR'&&/dedicado|internet|\blp\b|velocidade|produto|meio|operadora|link/i.test(k))],
- ['Atendimento',keys.filter(k=>/^(TIPO DE ATENDIMENTO|REPARO)$/i.test(k))],
+ ['Equipamento',keys.filter(k=>k==='REPARO'||(k!=='IP LINK'&&k!=='TIPO DE ATENDIMENTO'&&/equip|modelo|serial|qtd|quantidade|lote|host|network|rede|ip/i.test(k)))],
+ ['Link',keys.filter(k=>k==='TIPO DE ATENDIMENTO'||(k!=='ID VGR'&&/dedicado|internet|\blp\b|velocidade|produto|meio|operadora|link/i.test(k)))],
  ['Localização',keys.filter(k=>/endere|munic|cidade|coord|uf|cep/i.test(k))],
  ['Outras informações',keys.filter(k=>k!=='ID VGR'&&!/equip|modelo|serial|qtd|quantidade|lote|host|network|rede|ip|dedicado|internet|\blp\b|velocidade|produto|meio|operadora|link|endere|munic|cidade|coord|uf|cep|^(TIPO DE ATENDIMENTO|REPARO)$/i.test(k))]
  ].filter(g=>g[1].length);
