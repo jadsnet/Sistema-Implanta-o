@@ -190,15 +190,13 @@ button.secondary{background:#122a44}
 .stat .stat-emoji{isolation:isolate;overflow:hidden}
 .stat .stat-emoji .gl{position:absolute;inset:0;display:block;pointer-events:none;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.2),rgba(255,255,255,0) 50%,rgba(0,0,0,.15));z-index:1}
 
-
-/* Iconografia monocromática esculpida: desenho da mesma cor da placa. */
-.stat:nth-child(1){--icon-tone:#2870e8}
-.stat:nth-child(2){--icon-tone:#8149df}
-.stat:nth-child(3){--icon-tone:#d7a018}
-.stat:nth-child(4){--icon-tone:#159b68}
-.stat .stat-emoji .emboss-icon{width:28px;height:28px;display:block;position:relative;z-index:2;overflow:visible}
-.emboss-icon g{stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
-.emboss-icon .emboss-shadow{stroke:rgba(0,0,0,.64);transform:translate(0.8px,1.15px)}
-.emboss-icon .emboss-light{stroke:rgba(255,255,255,.38);transform:translate(-.8px,-1px)}
-.emboss-icon .emboss-face{stroke:var(--icon-tone);filter:drop-shadow(0 1px 1px rgba(0,0,0,.32))}
-@media(max-width:520px){.stat .stat-emoji .emboss-icon{width:23px;height:23px}}
+/* Camadas originais do inicio-dashboard.html: relevo na própria face do emoji */
+.stat .stat-emoji{--c:var(--emoji-bg,#17365b);isolation:isolate;overflow:hidden;box-shadow:0 5px 11px rgba(0,0,0,.4),inset 0 1px 1px rgba(255,255,255,.35),inset 0 -1.5px 2.5px rgba(0,0,0,.3)}
+.stat .stat-emoji .e,.stat .stat-emoji .fc,.stat .stat-emoji .gl{position:absolute;inset:0;grid-column:auto;grid-row:auto;display:grid;place-items:center;width:100%;height:100%;font-size:22px;line-height:1;font-weight:normal;align-self:auto;color:initial;pointer-events:none}
+.stat .stat-emoji .s{filter:brightness(0) blur(.35px);opacity:.45;transform:translate(1px,1.3px)}
+.stat .stat-emoji .h{filter:brightness(0) invert(1) blur(.3px);opacity:.5;transform:translate(-.85px,-1px)}
+.stat .stat-emoji .fc{overflow:hidden}
+.stat .stat-emoji .f{transform:translateX(-60px);filter:drop-shadow(60px 0 0 var(--c))}
+.stat .stat-emoji .d{filter:grayscale(1) contrast(1.3);opacity:.2;mix-blend-mode:multiply}
+.stat .stat-emoji .gl{background:linear-gradient(145deg,rgba(255,255,255,.2),rgba(255,255,255,0) 50%,rgba(0,0,0,.15));z-index:2}
+@media(max-width:520px){.stat .stat-emoji .e,.stat .stat-emoji .fc{font-size:18px}}
