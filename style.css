@@ -9,8 +9,8 @@ button.secondary,.tabs button{box-shadow:0 4px 12px #00000020;}
 .stat:nth-child(2){--emoji-bg:linear-gradient(145deg,#a16aff,#6e3bd0)}
 .stat:nth-child(3){--emoji-bg:linear-gradient(145deg,#f6c447,#bd8509)}
 .stat:nth-child(4){--emoji-bg:linear-gradient(145deg,#32c98e,#087e53)}
-.stat:nth-child(5){--emoji-bg:#14a05c}
-.stat:nth-child(6){--emoji-bg:#e8a23a}
+.stat:nth-child(5){--emoji-bg:linear-gradient(145deg,#32c98e,#087e53)}
+.stat:nth-child(6){--emoji-bg:linear-gradient(145deg,#ff6478,#c52f49)}
 @media(max-width:700px){.stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.stat{padding:10px;grid-template-columns:34px 1fr;min-height:68px}.stat .stat-emoji{width:32px;height:32px;font-size:18px;border-radius:10px}.stat b{font-size:19px}.stat span{font-size:10px}}
 @media(max-width:390px){.stats{grid-template-columns:1fr}}
 
@@ -201,8 +201,6 @@ button.secondary{background:#122a44}
 .stat .stat-emoji .gl{background:linear-gradient(145deg,rgba(255,255,255,.2),rgba(255,255,255,0) 50%,rgba(0,0,0,.15));z-index:2}
 @media(max-width:520px){.stat .stat-emoji .e,.stat .stat-emoji .fc{font-size:18px}}
 
-/* Cores finais dos indicadores; preserva as cinco camadas originais */
-.stat:nth-child(3) .stat-emoji{--c:#e0a21b}
-.stat:nth-child(4) .stat-emoji{--c:#1fae6e}
-.stat:nth-child(5) .stat-emoji{--c:#14a05c}
-.stat:nth-child(6) .stat-emoji{--c:#e8a23a}
+/* Cores dos ícones por STATUS, sem alterar o relevo nem os cartões */
+.stats .stat[data-statusfilter="Migrada"] .stat-emoji{--emoji-bg:#14a05c;--c:#14a05c;background:#14a05c}
+.stats .stat[data-statusfilter="Quebra"] .stat-emoji{--emoji-bg:#ed6a2c;--c:#ed6a2c;background:#ed6a2c}
