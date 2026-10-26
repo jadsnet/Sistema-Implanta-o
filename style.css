@@ -443,3 +443,21 @@ html:not([data-theme="light"]) .sidebar::before{
   .admin-config{padding:14px!important;gap:12px}
   .admin-config-section,.admin-config-section:last-child{padding:16px!important}
 }
+
+/* Ajuste final de contraste do tema claro — mantém estrutura e ícones */
+html[data-theme="light"]{--bg:#e1d2e9;--panel:#d3bddd;--panel2:#c9afd7;--muted:#634976}
+html[data-theme="light"] body,html[data-theme="light"] .main{background:#e1d2e9!important}
+html[data-theme="light"] .stat,html[data-theme="light"] .project,html[data-theme="light"] .project-row,html[data-theme="light"] .activity-line,html[data-theme="light"] .runbook-line{background:#ccb2da!important;box-shadow:0 6px 17px rgba(62,27,83,.18)!important}
+html[data-theme="light"] .panel,html[data-theme="light"] .activity-summary,html[data-theme="light"] .info-section,html[data-theme="light"] .evidence-section,html[data-theme="light"] .runbook-search,html[data-theme="light"] .runbook-detail .evidence-section{background:#d5c0e0!important;box-shadow:0 8px 22px rgba(62,27,83,.16)!important}
+html[data-theme="light"] .runbook-detail .evidence-card,html[data-theme="light"] .step-card,html[data-theme="light"] .report-columns label,html[data-theme="light"] .admin-config-section{background:#cbb1d9!important}
+html[data-theme="light"] .runbook-detail .evidence-drop,html[data-theme="light"] .crop-editor{background:#bfa0d0!important}
+html[data-theme="light"] input,html[data-theme="light"] select,html[data-theme="light"] textarea,html[data-theme="light"] .field input,html[data-theme="light"] .field select,html[data-theme="light"] .field textarea,html[data-theme="light"] .info-grid .field input{background:#c7a9d6!important;color:#321b42!important}
+html[data-theme="light"] .nav,html[data-theme="light"] .nav:not(.active),html[data-theme="light"] button.secondary,html[data-theme="light"] .filelabel,html[data-theme="light"] .report-trigger,html[data-theme="light"] .date-buttons button:not(.active),html[data-theme="light"] .tabs button{background:#c8a9d9!important;color:#342044!important}
+html[data-theme="light"] .nav.active,html[data-theme="light"] .nav:hover{background:#b68ace!important}
+html[data-theme="light"] .substats span{background:#c4a3d5!important;color:#432953!important}
+html[data-theme="light"] .sidebar{background:linear-gradient(180deg,#cdb0dc,#c4a3d5)!important}
+html[data-theme="light"] .project-sidebar-profile{background:#bfa0d1!important}
+html[data-theme="light"] .admin-config{background:#d4bddd!important}
+html[data-theme="light"] .admin-config-section .filelabel,html[data-theme="light"] .admin-config-section .import-preview{background:#b999cd!important}
+html[data-theme="light"] .activity-meta,html[data-theme="light"] .activity-meta .owner,html[data-theme="light"] .activity-meta .elapsed,html[data-theme="light"] .activity-line .owner,html[data-theme="light"] .activity-line .elapsed{color:#39204e!important;opacity:1!important;text-shadow:none!important}
+html[data-theme="light"] .muted,html[data-theme="light"] .sub,html[data-theme="light"] .field label,html[data-theme="light"] .stat span{color:#604373!important}
