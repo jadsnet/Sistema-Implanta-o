@@ -204,3 +204,13 @@ button.secondary{background:#122a44}
 /* Cores dos ícones por STATUS, sem alterar o relevo nem os cartões */
 .stats .stat[data-statusfilter="Migrada"] .stat-emoji{--emoji-bg:#14a05c;--c:#14a05c;background:#14a05c}
 .stats .stat[data-statusfilter="Quebra"] .stat-emoji{--emoji-bg:#ed6a2c;--c:#ed6a2c;background:#ed6a2c}
+
+/* Observações e carimbos da atividade */
+.activity-observations{margin-top:16px}
+.activity-observations textarea{width:100%;min-height:160px;resize:vertical;line-height:1.55;padding:13px;background:#10243b;color:#f1f5fb;border-radius:10px}
+.activity-observations .small{margin-top:3px}
+.stamp-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.stamp-actions button{min-height:37px}
+.activity-modal-overlay{position:fixed;inset:0;z-index:9999;background:rgba(0,6,15,.78);display:flex;align-items:center;justify-content:center;padding:16px}
+.activity-modal{width:min(640px,100%);max-height:90vh;overflow:auto;background:#0d1d31;border:1px solid #29435e;border-radius:17px;padding:24px;box-shadow:0 25px 70px #0009}
+.activity-modal h3{margin:0 0 10px}.activity-modal label{display:block;margin:16px 0 7px;color:#a9bfd9}.activity-modal textarea{display:block;width:100%;min-height:150px;resize:vertical;line-height:1.5;padding:12px}.activity-modal .stamp-actions{justify-content:flex-end}
