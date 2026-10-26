@@ -275,3 +275,30 @@ button.secondary:hover,.filelabel:hover,.report-trigger:hover{background:#462761
 .runbook-detail .evidence-hint{color:#c8b5df!important}
 .runbook-detail .evidence-hint strong{color:#d5a1ff!important}
 /* Leave status badge and 3D indicator colors untouched. */
+
+/* Refinamento Vivo: superficies sem contorno, elevacao suave e campos lilas. */
+.panel,.activity-summary,.info-section,.evidence-section,.runbook-search,.runbook-line,
+.runbook-detail .evidence-section,.runbook-detail .evidence-card,.runbook-steps,
+.project,.project-row,.activity-line,.stat,.step-card,.admin-config-section,
+.report-dialog,.activity-modal,.project-sidebar-profile{
+  border:0!important;
+  box-shadow:0 9px 24px rgba(0,0,0,.22),0 2px 6px rgba(0,0,0,.10)!important;
+}
+/* Selecao de filtro conserva o indicador de selecao sem borda marcada. */
+.stat-clickable.selected{outline:0!important;box-shadow:0 0 0 1px rgba(183,121,245,.28),0 9px 24px rgba(0,0,0,.26)!important}
+.sidebar .nav,.nav,.nav:not(.active){border:0!important;background:#251536!important;box-shadow:0 4px 12px rgba(0,0,0,.15)!important}
+.sidebar .nav.active,.nav.active,.sidebar .nav:hover,.nav:hover{border:0!important;background:#52316f!important;box-shadow:0 6px 17px rgba(0,0,0,.22)!important;color:#fff!important}
+.nav.active .nav-icon,.sidebar .nav.active .nav-icon{background:#7946a5!important;color:#f8eaff!important}
+.field input,.field select,.field textarea,.info-grid .field input,
+input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{
+  background:#402753!important;color:#fff6ff!important;border:0!important;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.10)!important;
+}
+input:focus,select:focus,textarea:focus{outline:2px solid rgba(187,125,247,.52)!important;outline-offset:1px}
+.report-columns label{background:#402753!important}
+.activity-line:hover{background:#2c1a40!important;border:0!important}
+/* Status de andamento na mesma familia amarela do status Pendente. */
+.status.Iniciando,.status.Finalizando,.status.Contatando{
+  background:#302b1c!important;color:#ffd26d!important;
+}
+/* Manter verde para Migrada e laranja para Quebra nos indicadores 3D. */
