@@ -347,3 +347,99 @@ html[data-theme="light"] .status.Pendente,html[data-theme="light"] .status.Em,ht
 html[data-theme="light"] .status.Migrada{background:#d7f4e4!important;color:#176640!important}
 html[data-theme="light"] .status.Quebra{background:#ffe2d3!important;color:#9b431d!important}
 @media(max-width:700px){.theme-toggle{min-width:66px;height:32px}.top-actions{gap:6px}}
+
+/* Refinamento visual: contraste lilás, administração e marca-d'água Vivo */
+html[data-theme="light"] .stat,
+html[data-theme="light"] .project,
+html[data-theme="light"] .project-row,
+html[data-theme="light"] .activity-line,
+html[data-theme="light"] .runbook-line{
+  background:#e9d9f0!important;
+  color:#342043!important;
+  border:0!important;
+  box-shadow:0 5px 16px rgba(71,35,92,.12)!important;
+}
+html[data-theme="light"] .panel,
+html[data-theme="light"] .activity-summary,
+html[data-theme="light"] .info-section,
+html[data-theme="light"] .evidence-section,
+html[data-theme="light"] .runbook-search,
+html[data-theme="light"] .runbook-detail .evidence-section{
+  background:#f2e6f7!important;
+  box-shadow:0 8px 24px rgba(67,30,89,.11)!important;
+}
+html[data-theme="light"] .runbook-detail .evidence-card,
+html[data-theme="light"] .step-card,
+html[data-theme="light"] .report-columns label{
+  background:#e8d6f0!important;
+  box-shadow:0 4px 12px rgba(68,35,92,.10)!important;
+}
+html[data-theme="light"] .runbook-detail .evidence-drop{background:#dcc6e8!important}
+html[data-theme="light"] .substats span{background:#ddc8e9!important}
+html[data-theme="light"] .project-sidebar-profile{background:#e6d3ee!important}
+
+/* Painel administrativo: seções em cartões independentes, sem linhas e sem quinas */
+.admin-config{display:flex!important;flex-direction:column;gap:16px;max-width:1200px!important;padding:22px!important;border:0!important;border-radius:20px!important}
+.admin-config-head{padding:4px 3px 17px!important;border-bottom:0!important}
+.admin-config-section{
+  display:block!important;
+  margin:0!important;
+  padding:22px!important;
+  border:0!important;
+  border-radius:17px!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.13)!important;
+  min-width:0;
+}
+.admin-config-section:last-child{padding:22px!important}
+.admin-config-section .filelabel{border-radius:12px!important}
+html[data-theme="light"] .admin-config{background:#eee0f4!important}
+html[data-theme="light"] .admin-config-section{
+  background:#e5d2ed!important;
+  color:#342043!important;
+  box-shadow:0 5px 17px rgba(78,36,103,.12)!important;
+}
+html[data-theme="light"] .admin-config-section .filelabel,
+html[data-theme="light"] .admin-config-section .import-preview{background:#d9bfe6!important;color:#422855!important}
+html:not([data-theme="light"]) .admin-config-section{background:#302040!important}
+
+/* Cartão de identidade do projeto: arredondamento consistente */
+.project-sidebar-profile{
+  position:relative;
+  border-radius:16px!important;
+  border:0!important;
+  padding:12px 10px!important;
+  margin:2px 0 16px!important;
+  box-shadow:0 6px 17px rgba(0,0,0,.14)!important;
+  overflow:hidden;
+  isolation:isolate;
+}
+.project-sidebar-profile>*{position:relative;z-index:1}
+.project-profile-image{border-radius:12px!important;overflow:hidden}
+html[data-theme="light"] .project-sidebar-profile{background:#e5d0ee!important}
+html[data-theme="light"] .project-profile-name,
+html[data-theme="light"] .project-profile-name strong{color:#342043!important}
+html[data-theme="light"] .project-profile-name small{color:#765d86!important}
+
+/* Marca-d'água no tema escuro: fixa ao fundo e sem bloquear interação */
+html:not([data-theme="light"]) .main{position:relative;isolation:isolate}
+html:not([data-theme="light"]) .main::before{
+  content:"";position:fixed;right:-5vw;top:24vh;
+  width:min(44vw,650px);height:min(60vh,650px);
+  background:url('favicon.png') center/contain no-repeat;
+  filter:grayscale(1) brightness(0) invert(25%) sepia(32%) saturate(1100%) hue-rotate(230deg);
+  opacity:.09;pointer-events:none;z-index:-1;
+}
+html:not([data-theme="light"]) .sidebar{position:sticky;isolation:isolate;overflow:hidden}
+html:not([data-theme="light"]) .sidebar::before{
+  content:"";position:absolute;right:-110px;bottom:6%;
+  width:290px;height:290px;background:url('favicon.png') center/contain no-repeat;
+  transform:rotate(-26deg);
+  filter:grayscale(1) brightness(0) invert(26%) sepia(34%) saturate(1300%) hue-rotate(235deg);
+  opacity:.13;pointer-events:none;z-index:-1;
+}
+@media(max-width:800px){
+  html:not([data-theme="light"]) .sidebar{position:relative;overflow-x:auto}
+  html:not([data-theme="light"]) .sidebar::before{display:none}
+  .admin-config{padding:14px!important;gap:12px}
+  .admin-config-section,.admin-config-section:last-child{padding:16px!important}
+}
