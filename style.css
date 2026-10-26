@@ -126,3 +126,21 @@ button.secondary,.tabs button{box-shadow:0 4px 12px #00000020;}
 .profile-config{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:12px 0 20px}
 .profile-config-preview{width:88px;height:88px;border:1px solid #365575;border-radius:14px;overflow:hidden;display:grid;place-items:center;background:#172e49;font-size:32px;font-weight:700}
 .profile-config .filelabel{margin-right:8px}
+
+/* Tema visual inspirado na referência: menu flutuante e superfícies suaves. */
+:root{--bg:#050d19;--panel:#0c1d31;--panel2:#11263f;--line:#1b3048}
+.app{gap:22px;padding:15px 16px;align-items:flex-start}
+.sidebar{position:sticky;top:15px;height:calc(100vh - 30px);width:220px;padding:18px 12px;background:linear-gradient(160deg,#0e2137,#091829);border:1px solid #1b314a;border-radius:20px;box-shadow:0 14px 32px #00000040;overflow-y:auto;scrollbar-width:thin}
+.brand{margin:4px 8px 6px}.brand2{margin:0 8px 22px}
+.nav{border:1px solid #1b314a!important;background:linear-gradient(145deg,#10243b,#0b1b2e);border-radius:11px;min-height:46px;margin:3px 0 7px;box-shadow:0 5px 12px #00000025!important;transition:background .18s,transform .18s,box-shadow .18s}
+.nav:hover{transform:translateY(-1px);box-shadow:0 8px 17px #00000038!important}
+.nav.active{background:linear-gradient(145deg,#173456,#10243d);border-color:#2b5078!important;box-shadow:inset 3px 0 #3985ff,0 6px 15px #00000030!important}
+.nav-icon{border-radius:9px;background:#1a3552}
+.nav-separator{background:#263b51;margin:10px 4px 12px}
+.main{padding:15px 12px 28px;max-width:none}
+.panel,.activity-summary,.info-section,.evidence-section,.runbook-steps,.runbook-search{background:#0d1d31;box-shadow:0 9px 24px #00000029;border:1px solid #172d46;border-radius:17px}
+.project,.project-row,.activity-line,.runbook-line,.evidence-card,.step-card,.stat{box-shadow:0 6px 16px #00000024;border:1px solid #20354d!important;border-radius:13px}
+button,.filelabel,input,select,textarea{border-radius:9px;transition:filter .15s,box-shadow .15s}
+button.secondary{background:#122a44}
+.project-sidebar-profile{border:1px solid #24425e;border-radius:13px;box-shadow:0 7px 17px #00000026}
+@media(max-width:800px){.app{display:block;padding:9px}.sidebar{position:relative;top:auto;height:auto;width:100%;border-radius:15px;display:flex;flex-direction:row;gap:5px;overflow-x:auto;padding:9px}.nav{flex:0 0 auto;white-space:nowrap;margin:0 3px}.main{padding:15px 3px}.project-sidebar-profile{min-width:140px;margin:0 5px}.sidebar>div:first-child{display:none}}
