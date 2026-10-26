@@ -97,3 +97,32 @@ button.secondary,.tabs button{box-shadow:0 4px 12px #00000020;}
 .filelabel input[type=file]{display:block;max-width:100%;margin-top:8px;color:#cbd5e1}
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
 .tabs button{border-radius:9px}
+
+/* Runbook: layout da referência em escala real (zoom 100%) */
+.runbook-detail{width:100%;max-width:1250px;margin:0 auto;padding:0 0 35px}
+.runbook-detail-heading{padding:18px 0 22px}
+.runbook-detail-heading h2{font-size:clamp(22px,2.5vw,30px)}
+.runbook-detail .evidence-section{position:relative;padding:36px 16px 16px;margin:30px 0 34px;border:1px solid #20334c;border-radius:12px;background:#0b1a2c}
+.runbook-detail .evidence-section>.floating-title{position:absolute;top:-17px;left:0;display:inline-block;margin:0;padding:10px 15px;font-size:13px;letter-spacing:0;color:#f0f5ff;background:#11243b;border-radius:10px}
+.runbook-detail .evidence-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.runbook-detail .evidence-card{min-width:0;padding:12px;background:#071321;border:1px solid #20334c;border-radius:10px}
+.runbook-detail .evidence-card>b{font-size:14px}
+.runbook-detail .evidence-card>p{font-size:12px;margin:5px 0 9px}
+.runbook-detail .evidence-drop{min-height:150px;padding:12px 14px;display:flex;align-items:flex-start;justify-content:flex-end;gap:8px;background:#10243b;border-radius:8px;overflow:hidden}
+.runbook-detail .evidence-placeholder{font-size:52px;top:25%;right:9%;opacity:.65}
+.runbook-detail .evidence-hint{font-size:12px;color:#9cb1cc;z-index:1}
+.runbook-detail .evidence-hint strong{color:#3985ff}
+.runbook-detail .evidence-drop img{max-height:360px;max-width:100%;object-fit:contain;align-self:center}
+.runbook-detail .runbook-steps{margin-top:28px;padding:18px}
+@media(min-width:1500px){.runbook-detail{max-width:1400px}.runbook-detail .evidence-drop{min-height:170px}}
+@media(max-width:700px){.runbook-detail .evidence-section{padding:32px 10px 10px}.runbook-detail .evidence-drop{min-height:130px}.runbook-detail .evidence-section>.floating-title{font-size:12px}}
+
+/* Identidade visual do projeto selecionado */
+.project-sidebar-profile[hidden]{display:none!important}
+.project-sidebar-profile{display:flex;align-items:center;gap:10px;margin:16px 5px 18px;padding:10px;background:#10243c;border:1px solid #29445f;border-radius:12px;min-width:0}
+.project-profile-image{width:52px;height:52px;flex:0 0 52px;border-radius:12px;overflow:hidden;background:#1c3c63;display:grid;place-items:center;color:#fff;font-size:24px;font-weight:800}
+.project-profile-image img,.profile-config-preview img{width:100%;height:100%;object-fit:cover}
+.project-profile-name{font-weight:700;color:#fff;overflow-wrap:anywhere;font-size:13px}
+.profile-config{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:12px 0 20px}
+.profile-config-preview{width:88px;height:88px;border:1px solid #365575;border-radius:14px;overflow:hidden;display:grid;place-items:center;background:#172e49;font-size:32px;font-weight:700}
+.profile-config .filelabel{margin-right:8px}
