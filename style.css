@@ -214,3 +214,18 @@ button.secondary{background:#122a44}
 .activity-modal-overlay{position:fixed;inset:0;z-index:9999;background:rgba(0,6,15,.78);display:flex;align-items:center;justify-content:center;padding:16px}
 .activity-modal{width:min(640px,100%);max-height:90vh;overflow:auto;background:#0d1d31;border:1px solid #29435e;border-radius:17px;padding:24px;box-shadow:0 25px 70px #0009}
 .activity-modal h3{margin:0 0 10px}.activity-modal label{display:block;margin:16px 0 7px;color:#a9bfd9}.activity-modal textarea{display:block;width:100%;min-height:150px;resize:vertical;line-height:1.5;padding:12px}.activity-modal .stamp-actions{justify-content:flex-end}
+
+/* Indicador de quebra: centralização óptica do símbolo, sem alterar o relevo */
+.stats .stat[data-statusfilter="Quebra"] .stat-emoji .e{place-items:center;line-height:1; padding:0; transform-origin:center}
+.stats .stat[data-statusfilter="Quebra"] .stat-emoji .e.s{transform:translate(1px,1.3px)}
+.stats .stat[data-statusfilter="Quebra"] .stat-emoji .e.h{transform:translate(-.85px,-1px)}
+.stats .stat[data-statusfilter="Quebra"] .stat-emoji .e.d{transform:translateY(-1px)}
+.stats .stat[data-statusfilter="Quebra"] .stat-emoji .fc .e.f{transform:translate(-60px,-1px)}
+.report-search-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.report-search-heading h3{margin:0}
+.report-trigger{font-size:11px;padding:6px 9px;border-radius:8px;background:#10243b;color:#a9bfd9;border:1px solid #1a304a;white-space:nowrap}
+.report-overlay{position:fixed;inset:0;background:#000a;display:grid;place-items:center;z-index:100;padding:18px}
+.report-dialog{width:min(480px,100%);max-height:90vh;overflow:auto;background:#0c1a2b;border:1px solid #29415c;border-radius:16px;padding:20px;box-shadow:0 20px 60px #0008}
+.report-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.report-dialog-head h3{margin:0}.report-close{background:transparent;font-size:24px;color:#b5c9df;padding:0 7px}
+.report-columns{display:grid;gap:8px;margin:16px 0}.report-columns label{display:flex;align-items:center;gap:10px;background:#10243b;padding:10px 12px;border-radius:9px;cursor:pointer}.report-columns input{accent-color:#3b82f6;min-width:16px;width:16px;height:16px}
+.report-dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}
