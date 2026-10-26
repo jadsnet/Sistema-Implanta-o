@@ -229,3 +229,7 @@ button.secondary{background:#122a44}
 .report-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.report-dialog-head h3{margin:0}.report-close{background:transparent;font-size:24px;color:#b5c9df;padding:0 7px}
 .report-columns{display:grid;gap:8px;margin:16px 0}.report-columns label{display:flex;align-items:center;gap:10px;background:#10243b;padding:10px 12px;border-radius:9px;cursor:pointer}.report-columns input{accent-color:#3b82f6;min-width:16px;width:16px;height:16px}
 .report-dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}
+
+/* Filtro ativo: marca d'água sutil no canto superior direito do cartão. */
+.stats .stat-clickable .stat-filter-watermark{position:absolute;right:12px;top:10px;width:15px;height:15px;opacity:.20;color:#b3c9e4;pointer-events:none;z-index:2}
+.stats .stat-clickable.selected .stat-filter-watermark{opacity:.24}
