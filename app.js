@@ -5,7 +5,13 @@ const activeStatuses=['Contatando técnico','Iniciando configuração','Finaliza
 let dateFilter='today', selectedDate=new Date().toISOString().slice(0,10), detailMode='view';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const arr=k=>DB[k]||[];const project=()=>arr('projects').find(x=>x.id===projectId);
-function toast(s){let t=$('#toast');t.textContent=s;t.style.display='block';setTimeout(()=>t.style.display='none',2400)}
+let toastTimer;
+function toast(s){
+ const t=$('#toast');if(!t)return;
+ clearTimeout(toastTimer);
+ t.textContent=s;t.style.display='block';t.classList.add('toast-visible');
+ toastTimer=setTimeout(()=>{t.classList.remove('toast-visible');t.style.display='none'},5000);
+}
 function save(){localStorage.setItem('gestaoImplantacaoDB',JSON.stringify(DB))}
 function log(action,detail='',actId=''){DB.log.unshift({id:'log_'+Date.now(),data:{act:action,action,detail,actId,ts:new Date().toISOString(),user:localStorage.getItem('gi_user')||'Administrador'}});save()}
 function normStatus(s){if(!s)return'Pendente';let v=String(s).toLowerCase();if(v.includes('contatando')||v.includes('iniciando')||v.includes('finalizando')||v.includes('andamento'))return'Em andamento';if(v.includes('migrad')||v.includes('conclu'))return'Migrada';if(v.includes('quebra'))return'Quebra';return'Pendente'}
@@ -60,6 +66,7 @@ function makeActivityStamp(a,type){
  return `SAE\n\nSegue para validação,\n\nObs. A solução foi entregue com licença Trial, a licença definitiva será ativa em breve, a informação foi passada ao time do NOC, Sr. Eduardo Vital Barbosa está ciente do tema.\n\nTrata-se de solução Cisco Meraki: SITE SPOKE\n\nCliente: ${getName(project())==='COPASA'?'COPASA - Companhia de Saneamento de Minas Gerais':getName(project())}\n\nORGANIZAÇÃO MERAKI: SDWAN - ${getName(project()).toUpperCase()}\nNETWORK: ${net}\nSerial number: ${serial}\n\nINFORMAÇÕES DO LINK:\n${link}\nTIPO DE ATENDIMENTO: ${service}\nIP MX: ${ip}`;
 }
 async function copyActivityStamp(a,type){
+ if(a.data.analystName!==currentUser())return toast('Apenas o responsável pode gerar carimbos');
  // Inclui alterações ainda em edição antes de montar o carimbo.
  document.querySelectorAll('[data-edit]').forEach(el=>{a.data.ed=a.data.ed||{};a.data.ed[el.dataset.edit]=el.value});
  const txt=makeActivityStamp(a,type);
@@ -86,8 +93,8 @@ function activityDetail(id,mode='view'){
  <section class="activity-summary"><div class="eyebrow">ID VGR</div><h2>${esc(activityName(a))}</h2><p class="muted">Analista: ${esc(d.analystName||'—')} · Data: ${esc(d.startAt?new Date(d.startAt).toLocaleDateString('pt-BR'):'—')} · Início: ${esc(d.startAt?new Date(d.startAt).toLocaleTimeString('pt-BR'):'—')} · Tempo: ${esc(elapsed(d.startAt)||'—')}</p>
  <div class="field"><label>Status da atividade</label><select id="activityStatus" ${canEdit?'':'disabled'}>${['Contatando técnico','Iniciando configuração','Finalizando configuração','Migrada','Quebra','Pendente'].map(st=>`<option ${d.status===st?'selected':''}>${st}</option>`).join('')}</select></div>
  <div class="field activity-observations ${finalStatus?'':'hidden'}" id="activityObservationsWrap"><label for="activityObservations">Observações da atividade</label><textarea id="activityObservations" rows="7" placeholder="Registre observações, detalhes da migração ou motivo da quebra..." ${canEdit?'':'readonly'}>${esc(d.observations||'')}</textarea><span class="small muted">Campo para textos longos. Salvamento automático.</span></div>
- <div class="filters">${!d.analystName?`<button id="adoptActivity">Adotar atividade</button>`:!d.endAt?`<button class="danger" id="abandonActivity">Abandonar atividade</button>`:""}</div>
- <div class="stamp-actions"><button class="secondary" id="generateSaeStamp">Gerar carimbo SAE</button><button class="secondary" id="generateMerakiStamp">Gerar carimbo Meraki</button></div>
+ <div class="filters">${!d.analystName?`<button id="adoptActivity">Adotar atividade</button>`:canEdit&&!d.endAt?`<button class="danger" id="abandonActivity">Abandonar atividade</button>`:""}</div>
+ ${canEdit?`<div class="stamp-actions"><button class="secondary" id="generateSaeStamp">Gerar carimbo SAE</button><button class="secondary" id="generateMerakiStamp">Gerar carimbo Meraki</button></div>`:'<p class="small muted">Somente o analista responsável pode editar esta atividade.</p>'}
  <p class="small muted">Alterações são salvas automaticamente neste navegador. Os carimbos são copiados para a área de transferência.</p></section>
  ${groups.map(g=>`<section class="info-section"><h3 class="floating-title">${esc(g[0])}</h3><div class="info-grid">${g[1].map(field).join('')}</div></section>`).join('')}</div>`;
 }
@@ -98,6 +105,7 @@ function wireDetail(){
  if($('#abandonActivity'))$('#abandonActivity').onclick=()=>abandonActivity(selectedActivity);
  const a=arr('activities').find(x=>x.id===selectedActivity);if(!a)return;
  const persist=()=>{
+  if(a.data.analystName!==currentUser())return;
   if(!a.data.ed)a.data.ed={};
   document.querySelectorAll('[data-edit]').forEach(el=>a.data.ed[el.dataset.edit]=el.value);
   const notes=$('#activityObservations');if(notes)a.data.observations=notes.value;
@@ -109,6 +117,7 @@ function wireDetail(){
  });
  $('#activityObservations')?.addEventListener('input',persist);
  $('#activityStatus')?.addEventListener('change',()=>{
+  if(a.data.analystName!==currentUser())return;
   persist();const next=$('#activityStatus').value,prev=a.data.status;
   a.data.status=next;
   if(['Migrada','Quebra'].includes(next)&&!a.data.endAt)a.data.endAt=new Date().toISOString();

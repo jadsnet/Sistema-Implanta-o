@@ -583,3 +583,13 @@ html:not([data-theme="light"]) .stats .stat{box-shadow:7px 12px 20px -5px rgba(6
 html[data-theme="light"] .stats .stat{box-shadow:7px 12px 20px -5px rgba(52,23,78,.42),3px 5px 10px rgba(75,37,103,.20),inset 0 1px 0 rgba(255,255,255,.12)!important;}
 html:not([data-theme="light"]) .stats .stat:hover{box-shadow:9px 16px 25px -5px rgba(6,1,15,.84),4px 7px 13px rgba(10,2,22,.54)!important;}
 html[data-theme="light"] .stats .stat:hover{box-shadow:9px 16px 25px -5px rgba(52,23,78,.50),4px 7px 13px rgba(75,37,103,.26)!important;}
+
+/* Mensagens de confirmação legíveis em ambos os temas */
+#toast.toast-visible, .toast.toast-visible {
+ position:fixed!important;bottom:28px!important;right:28px!important;
+ z-index:100000!important;max-width:min(440px,calc(100vw - 36px));
+ background:#167547!important;color:#fff!important;
+ border:1px solid #43bb7e!important;border-radius:12px!important;
+ padding:14px 20px!important;box-shadow:0 9px 28px rgba(5,55,31,.38)!important;
+ font-weight:700!important;opacity:1!important;visibility:visible!important;
+}
