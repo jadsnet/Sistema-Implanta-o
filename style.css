@@ -834,3 +834,13 @@ html[data-theme="light"] .login-overlay::before,html[data-theme="light"] .login-
 .custom-filter-card #customFilterCount{margin-top:6px;font-size:10px}
 @media(max-width:1050px){.custom-filter-card{margin:14px 0 18px auto}}
 @media(max-width:520px){.custom-filter-card{width:100%;margin:14px 0 18px}}
+
+/* Cartão customizado na quarta posição da grade de status: alinhamento real, sem margens negativas */
+.stats{position:relative}
+.custom-filter-card{width:calc((100% - 24px)/3);margin:0 0 0 auto;min-height:88px;padding:11px 14px;position:relative;box-shadow:0 7px 18px rgba(0,0,0,.22),0 2px 5px rgba(0,0,0,.12);border-radius:15px;background:var(--panel2);z-index:1}
+.custom-filter-card h3{display:flex;align-items:center;justify-content:space-between;margin:0 0 7px}
+.custom-filter-icon{width:16px;height:16px;opacity:.18;flex-shrink:0}
+.custom-filter-card.selected .custom-filter-icon{opacity:1;color:var(--blue)}
+.custom-filter-card #customFilterCount{margin-top:5px}
+@media(max-width:900px){.custom-filter-card{width:calc((100% - 12px)/2)}}
+@media(max-width:520px){.custom-filter-card{width:100%;margin:14px 0 0}}
