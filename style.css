@@ -577,3 +577,9 @@ html[data-theme="light"] .stats .stat{box-shadow:0 13px 19px -7px rgba(54,22,79,
 .stats .stat:hover{transform:translateY(-2px);}
 html:not([data-theme="light"]) .stats .stat:hover{box-shadow:0 16px 23px -7px rgba(5,0,13,.85),0 7px 13px rgba(12,3,24,.5)!important;}
 html[data-theme="light"] .stats .stat:hover{box-shadow:0 16px 23px -7px rgba(54,22,79,.48),0 7px 13px rgba(72,37,98,.24)!important;}
+
+/* Sombra projetada para baixo e para a lateral direita dos cartões */
+html:not([data-theme="light"]) .stats .stat{box-shadow:7px 12px 20px -5px rgba(6,1,15,.77),3px 5px 10px rgba(10,2,22,.48),inset 0 1px 0 rgba(255,255,255,.035)!important;}
+html[data-theme="light"] .stats .stat{box-shadow:7px 12px 20px -5px rgba(52,23,78,.42),3px 5px 10px rgba(75,37,103,.20),inset 0 1px 0 rgba(255,255,255,.12)!important;}
+html:not([data-theme="light"]) .stats .stat:hover{box-shadow:9px 16px 25px -5px rgba(6,1,15,.84),4px 7px 13px rgba(10,2,22,.54)!important;}
+html[data-theme="light"] .stats .stat:hover{box-shadow:9px 16px 25px -5px rgba(52,23,78,.50),4px 7px 13px rgba(75,37,103,.26)!important;}
