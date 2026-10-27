@@ -776,3 +776,5 @@ html:not([data-theme="light"]) .activity-detail-screen .stamp-panel{--stamp-fram
 .activity-detail-screen .stamp-panel::before{background:var(--stamp-frame-color)!important}
 .activity-detail-screen .stamp-panel-heading::before,
 .activity-detail-screen .stamp-panel-heading::after{background:var(--stamp-frame-color)!important}
+
+.evidence-drop{position:relative;cursor:text}.evidence-drop:focus{outline:2px solid rgba(195,153,235,.7);outline-offset:-3px}.evidence-remove{position:absolute;right:12px;top:10px;z-index:3;border:0;border-radius:50%;background:rgba(35,19,50,.42);color:#f2e9fa;font-size:19px;width:27px;height:27px;line-height:24px;padding:0;cursor:pointer}.evidence-remove:hover{background:rgba(35,19,50,.72)}
