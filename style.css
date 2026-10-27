@@ -528,3 +528,30 @@ html[data-theme="light"] .stats .stat-clickable.selected .stat-filter-watermark{
 @media(max-width:700px){.theme-toggle{min-width:56px!important;width:56px;height:28px!important}}
 .report-trigger{display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .report-trigger .report-sheet-icon{display:block;width:15px;height:15px;flex:none;color:currentColor}
+
+/* Refinamento do modal de exportacao: contraste, profundidade e cartoes. */
+.report-overlay{background:rgba(9,5,18,.72);backdrop-filter:blur(5px)}
+.report-dialog{background:linear-gradient(155deg,#281737,#1c112c)!important;border:1px solid #624578!important;border-radius:20px;padding:24px;box-shadow:0 28px 80px #090311b0,0 1px 0 #ffffff13 inset;color:#f4eafa!important}
+.report-dialog-head{padding-bottom:14px;border-bottom:1px solid #ffffff1a}
+.report-dialog-head h3{color:#f5ebff!important;font-size:17px}
+.report-dialog .small.muted{color:#c9b6dc!important;opacity:1!important;line-height:1.55;margin:15px 0}
+.report-dialog .report-close{background:#56316f!important;color:#fff!important;border:0!important;border-radius:10px;width:34px;height:34px;display:grid;place-items:center;line-height:1;padding:0;font-size:23px;box-shadow:0 3px 10px #12081c55}
+.report-columns{gap:9px;margin:18px 0 22px}
+.report-columns label{background:#382449!important;color:#eee2f8!important;border:1px solid #64487866!important;border-radius:11px;padding:13px 14px;min-height:44px;box-shadow:0 3px 8px #10071a30;transition:background .15s,border-color .15s}
+.report-columns label:hover{background:#49305e!important;border-color:#9e6dc0!important}
+.report-columns input{accent-color:#a653e8!important;width:17px;height:17px;min-width:17px}
+.report-dialog-actions{padding-top:16px;border-top:1px solid #ffffff1a}
+.report-dialog-actions button{border-radius:10px;padding:10px 15px}
+.report-dialog-actions #downloadActivityReport{background:#7b26bc!important;color:#fff!important;box-shadow:0 5px 14px #4b147d55}
+.report-dialog-actions #cancelActivityReport{background:#49305d!important;color:#f4e7ff!important}
+html[data-theme="light"] .report-overlay{background:rgba(32,16,50,.52)}
+html[data-theme="light"] .report-dialog{background:linear-gradient(155deg,#624478,#513568)!important;border:1px solid #9575ab!important;color:#fff!important;box-shadow:0 28px 70px #29143d75,0 1px 0 #ffffff2a inset}
+html[data-theme="light"] .report-dialog-head h3{color:#fff!important}
+html[data-theme="light"] .report-dialog .small.muted{color:#eee0f6!important}
+html[data-theme="light"] .report-dialog .report-close{background:#7e3fa9!important;color:#fff!important}
+html[data-theme="light"] .report-columns label{background:#785b91!important;color:#fff!important;border:1px solid #ac8cc4aa!important;box-shadow:0 4px 12px #2e174733!important}
+html[data-theme="light"] .report-columns label:hover{background:#886aa1!important;border-color:#d7b8ef!important}
+html[data-theme="light"] .report-columns input{accent-color:#7b20c1!important}
+html[data-theme="light"] .report-dialog-actions #cancelActivityReport{background:#806299!important;color:#fff!important}
+html[data-theme="light"] .report-dialog-actions #downloadActivityReport{background:#7422b7!important;color:#fff!important}
+@media(max-width:520px){.report-dialog{padding:18px}.report-columns label{padding:11px 12px}}
