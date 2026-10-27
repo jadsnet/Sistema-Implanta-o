@@ -1044,3 +1044,24 @@ html[data-theme="light"] .project-selection-grid .project:hover{
 }
 @media(max-width:1050px){.project-selection-grid{grid-template-columns:repeat(2,minmax(0,290px))}}
 @media(max-width:650px){.project-selection-grid{grid-template-columns:minmax(0,290px);gap:18px}}
+
+/* Área de seleção ajustada ao conjunto de cartões, sem faixas vazias laterais */
+.project-selection-panel{
+  width:min(100%, 1040px);
+  margin:12px auto;
+  padding:20px 30px 30px;
+}
+.project-selection-panel .project-selection-grid{
+  grid-template-columns:repeat(3,minmax(0,290px));
+  justify-content:space-evenly;
+  column-gap:32px;
+  row-gap:32px;
+}
+@media(max-width:1050px){
+  .project-selection-panel{width:min(100%,700px);padding:18px 22px 26px}
+  .project-selection-panel .project-selection-grid{grid-template-columns:repeat(2,minmax(0,290px));gap:28px;justify-content:space-evenly}
+}
+@media(max-width:650px){
+  .project-selection-panel{width:100%;padding:16px}
+  .project-selection-panel .project-selection-grid{grid-template-columns:minmax(0,290px);gap:22px;justify-content:center}
+}
