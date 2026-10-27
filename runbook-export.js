@@ -35,7 +35,7 @@ async function exportCopasaRunbook(activity, evidenceImages) {
   }
   await updateCells(1, {
     B19:activity.data.analystName || '',
-    B20:[technician,phone].filter(Boolean).join(' · '),
+    B20:activity.data.analystName || '',
     B22:[localName,localPhone].filter(Boolean).join(' · ')
   });
   const ipLink=lookup('IP LINK','IP WAN','IP WAN1');
@@ -43,7 +43,7 @@ async function exportCopasaRunbook(activity, evidenceImages) {
   const maskFromPrefix=p=>{let n=Number(p);if(n<0||n>32)return '';return [0,8,16,24].map(x=>{let bits=Math.max(0,Math.min(8,n-x));return bits===0?0:256-Math.pow(2,8-bits)}).join('.')};
   const mask=lookup('MASK','MÁSCARA','MASCARA') || (cidr?maskFromPrefix(cidr[1]):'');
   const ip=ipLink.replace(/\/\d{1,2}$/,'');
-  const wan={B1:lookup('EQUIPAMENTO','MODELO DO EQUIPAMENTO','MODELO'),B2:lookup('SERIAL MX','SERIAL NUMBER','SERIAL','NÚMERO DE SÉRIE'),B3:lookup('ID DEDICADO','ID LINK 1 (WAN1)','ID INTERNET'),B4:lookup('LP'),B5:lookup('VELOCIDADE DO LINK','VELOCIDADE'),B6:lookup('TECNOLOGIA','MEIOS','PRODUTO'),B7:ip,B8:lookup('GTW','GATEWAY','GW WAN1'),B9:mask};
+  const wan={B1:lookup('EQUIPAMENTO','MODELO DO EQUIPAMENTO','MODELO'),B2:lookup('SERIAL MX','SERIAL NUMBER','SERIAL','NÚMERO DE SÉRIE'),B3:lookup('ID DEDICADO','ID LINK 1 (WAN1)','ID INTERNET'),B4:lookup('LP'),B5:lookup('VELOCIDADE DO LINK','VELOCIDADE'),B6:lookup('TIPO DE ATENDIMENTO','TECNOLOGIA','MEIOS','PRODUTO'),B7:ip,B8:ip,B9:mask};
   await updateCells(3,wan);
   // Inserir imagens sem reconstruir o arquivo: mantém as demais abas e a formatação Excel.
   const drawingNS='http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing';
