@@ -672,3 +672,13 @@ html[data-theme="light"] .project-rename>label{color:#f5e8ff!important}
 #generateSaeStamp{background:#a51b99!important}
 #generateSaeStamp img{width:auto!important;height:100%!important;max-width:100%!important;object-fit:contain!important}
 #generateMerakiStamp img{width:92%!important;height:auto!important;max-height:80%!important;object-fit:contain!important}
+
+/* Painel de carimbos com linha vertical e título integrado */
+.activity-detail-screen .stamp-panel{width:215px;max-width:100%;margin:22px 0 4px auto;padding:0 8px 12px 17px;border-left:3px solid var(--accent,#9a57c9);position:relative}
+.activity-detail-screen .stamp-panel-heading{display:flex;align-items:center;gap:9px;margin:-10px 0 14px;color:var(--text,#f1e3fa);font-size:14px;font-weight:700}
+.activity-detail-screen .stamp-panel-heading:after{content:"";height:2px;flex:1;background:var(--accent,#9a57c9);border-radius:3px;opacity:.8}
+.activity-detail-screen .stamp-panel .stamp-actions{margin:0!important;align-items:center!important;gap:20px!important}
+.activity-detail-screen #generateSaeStamp{background:#a51b99!important}
+.activity-detail-screen #generateSaeStamp img{width:auto!important;height:100%!important;max-width:100%!important;object-fit:contain!important;object-position:center!important}
+.activity-detail-screen #generateMerakiStamp img{width:92%!important;height:auto!important;max-height:80%!important;object-fit:contain!important;object-position:center!important}
+@media(max-width:480px){.activity-detail-screen .stamp-panel{margin-right:0}}
