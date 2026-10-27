@@ -517,3 +517,14 @@ html[data-theme="light"] .runbook-detail .evidence-hint strong{color:#f0bfff!imp
 /* Reforco discreto do simbolo no fundo e na barra lateral. */
 html[data-theme="light"] .main::before{opacity:.15!important;filter:grayscale(1) sepia(1) hue-rotate(214deg) saturate(2.1) brightness(.82)!important}
 html[data-theme="light"] .sidebar::before{opacity:.25!important;filter:grayscale(1) brightness(1.8) sepia(1) hue-rotate(220deg) saturate(1.4)!important}
+
+/* Ajustes pontuais: indicador de filtro, alternância de tema e exportação */
+.stats .stat-clickable .stat-filter-watermark{width:20px;height:20px;right:12px;top:10px;opacity:.34;color:#c6a6e4}
+.stats .stat-clickable.selected .stat-filter-watermark{opacity:.42}
+html[data-theme="light"] .stats .stat-clickable .stat-filter-watermark{width:21px;height:21px;color:#38204e;opacity:.43}
+html[data-theme="light"] .stats .stat-clickable.selected .stat-filter-watermark{opacity:.55}
+.theme-toggle{min-width:60px!important;width:60px;height:29px!important;gap:4px!important;padding:4px 8px!important}
+.theme-toggle span{font-size:15px!important}
+@media(max-width:700px){.theme-toggle{min-width:56px!important;width:56px;height:28px!important}}
+.report-trigger{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.report-trigger .report-sheet-icon{display:block;width:15px;height:15px;flex:none;color:currentColor}
