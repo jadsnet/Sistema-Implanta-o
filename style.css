@@ -911,3 +911,8 @@ html[data-theme="light"] .stats > .custom-filter-card .custom-filter-icon {
 @media(max-width:1200px){.activity-line{grid-template-columns:minmax(0,1fr) 245px 116px 105px;gap:8px}.activity-line .activity-meta{grid-template-columns:0px 82px minmax(0,1fr);gap:7px}.activity-line .activity-completion-date{display:none}}
 @media(max-width:850px){.activity-line{grid-template-columns:minmax(0,1fr) 120px;gap:9px}.activity-line .activity-main{grid-column:1}.activity-line .activity-meta{grid-column:1;grid-row:2;grid-template-columns:0px 90px minmax(0,1fr)}.activity-line > .status{grid-column:2;grid-row:1}.activity-line > button{grid-column:2;grid-row:2}}
 @media(max-width:520px){.stats > .custom-filter-card .custom-filter-fields{max-width:100%}.activity-line{grid-template-columns:minmax(0,1fr) 105px}.activity-line .activity-meta{grid-template-columns:0px 82px minmax(0,1fr)}}
+/* Mesmo efeito flutuante dos cartões de status, com sombra abaixo e à direita. */
+.stats > .custom-filter-card,
+html[data-theme="light"] .stats > .custom-filter-card {
+  box-shadow: 7px 11px 17px -3px rgba(17, 6, 29, .43), 3px 5px 9px rgba(17, 6, 29, .20) !important;
+}
