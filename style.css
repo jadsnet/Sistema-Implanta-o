@@ -823,3 +823,14 @@ html[data-theme="light"] .login-overlay::before,html[data-theme="light"] .login-
 /* Filtragem customizada */
 .custom-filter-card{background:var(--card,rgba(120,80,150,.18));border-radius:15px;padding:18px;margin:18px 0;box-shadow:3px 5px 14px rgba(0,0,0,.12)}
 .custom-filter-card h3{margin:0 0 14px;font-size:16px}.custom-filter-fields{display:flex;align-items:end;flex-wrap:wrap;gap:12px}.custom-filter-fields label{display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px;font-size:12px}.custom-filter-fields input,.custom-filter-fields select{width:100%;min-height:38px}.custom-filter-fields button{min-height:38px}.custom-filter-card #customFilterCount{margin-top:10px}.activity-completion-date{font-size:11px;opacity:.8;white-space:nowrap;margin-right:10px}
+
+/* Filtro compacto no canto direito, duas linhas e atualização imediata */
+.custom-filter-card{width:min(100%,430px);margin:-138px 0 28px auto;min-height:120px;padding:12px 14px;position:relative;z-index:1}
+.custom-filter-card h3{font-size:13px;margin:0 0 8px}
+.custom-filter-fields{display:grid;grid-template-columns:minmax(0,1fr) 65px;gap:7px 8px;align-items:end}
+.custom-filter-fields label{display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:7px;min-width:0;grid-column:1;font-size:11px}
+.custom-filter-fields label input,.custom-filter-fields label select{min-height:30px;height:30px;padding:5px 8px;font-size:11px}
+.custom-filter-fields #clearCustomFilter{grid-column:2;grid-row:1 / span 2;min-height:30px;align-self:center;padding:6px 8px;font-size:11px}
+.custom-filter-card #customFilterCount{margin-top:6px;font-size:10px}
+@media(max-width:1050px){.custom-filter-card{margin:14px 0 18px auto}}
+@media(max-width:520px){.custom-filter-card{width:100%;margin:14px 0 18px}}
