@@ -819,3 +819,7 @@ html[data-theme="light"] .login-overlay::before,html[data-theme="light"] .login-
 .login-brand-icon{position:relative;flex-shrink:0}
 .login-brand-icon::after{content:"";display:block;width:34px;height:43px;background:#fff;mask:url('vivo-bonequinho.svg') center/contain no-repeat;-webkit-mask:url('vivo-bonequinho.svg') center/contain no-repeat}
 .login-overlay::before,.login-overlay::after{background-size:contain!important;background-repeat:no-repeat!important}
+
+/* Filtragem customizada */
+.custom-filter-card{background:var(--card,rgba(120,80,150,.18));border-radius:15px;padding:18px;margin:18px 0;box-shadow:3px 5px 14px rgba(0,0,0,.12)}
+.custom-filter-card h3{margin:0 0 14px;font-size:16px}.custom-filter-fields{display:flex;align-items:end;flex-wrap:wrap;gap:12px}.custom-filter-fields label{display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px;font-size:12px}.custom-filter-fields input,.custom-filter-fields select{width:100%;min-height:38px}.custom-filter-fields button{min-height:38px}.custom-filter-card #customFilterCount{margin-top:10px}.activity-completion-date{font-size:11px;opacity:.8;white-space:nowrap;margin-right:10px}
