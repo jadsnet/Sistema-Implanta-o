@@ -99,7 +99,7 @@ function activityDetail(id,mode='view'){
  const keys=[...new Set([...Object.keys(r),...extraDefinitions.map(x=>x.name),'LP','IP LINK','SERIAL MX','TIPO DE ATENDIMENTO','REPARO','NOME DO TÉCNICO','TELEFONE DO TÉCNICO','NOME DO RESPONSÁVEL NO LOCAL','TELEFONE DO RESPONSÁVEL'])].filter(k=>String(k).trim()&&!/^(_status|_analista|_motivo)$/i.test(k));
  const val=k=>ed[k]!==undefined?ed[k]:(r[k]??'');
  const canEdit=d.analystName===currentUser();
- const field=k=>`<div class="field"><label>${esc(k)}</label><input data-edit="${esc(k)}" value="${esc(val(k))}" ${k==='IP LINK'?'inputmode="decimal" placeholder="0.0.0.0/0" pattern="[0-9./]*"':''} ${canEdit?'':'readonly'}></div>`;
+ const field=k=>`<div class="field"><label>${esc(k==='REPARO'?'REPARO (TIKET NOC - SAE)':k)}</label><input data-edit="${esc(k)}" value="${esc(val(k))}" ${k==='IP LINK'?'inputmode="decimal" placeholder="0.0.0.0/0" pattern="[0-9./]*"':''} ${canEdit?'':'readonly'}></div>`;
  const groups=[
  ['Equipamento',keys.filter(k=>k==='REPARO'||(k!=='IP LINK'&& !/velocidade/i.test(k)&&k!=='TIPO DE ATENDIMENTO'&&/equip|modelo|serial|qtd|quantidade|lote|host|network|rede|ip/i.test(k)))],
  ['Link',keys.filter(k=>k==='TIPO DE ATENDIMENTO'||(k!=='ID VGR'&&/dedicado|internet|\blp\b|velocidade|produto|meio|operadora|link/i.test(k)))],
@@ -108,6 +108,10 @@ function activityDetail(id,mode='view'){
  ];
  for(const x of extraDefinitions){for(const g of groups)g[1]=g[1].filter(k=>k!==x.name);let dest=groups.find(g=>g[0]===x.section)||groups[3];if(/velocidade do link/i.test(x.name))dest=groups[1];dest[1].push(x.name)}
  const assignedFields=new Set();for(const g of [groups[1],groups[0],groups[2],groups[3]])g[1]=g[1].filter(k=>{if(assignedFields.has(k))return false;assignedFields.add(k);return true});
+ // Apresentação unificada sem alterar as chaves de dados nem o cadastro de campos.
+ groups[2][0]='Localização / Unidade';
+ groups[2][1].push(...groups[3][1]);
+ groups.splice(3,1);
  const visibleGroups=groups.filter(g=>g[1].length);
  const finalStatus=['Migrada','Quebra'].includes(d.status);
  return `<div class="activity-detail-screen"><div class="detailhead detail-toolbar"><button class="secondary" id="closeDetail">← Voltar à busca</button><span class="status ${esc(normStatus(d.status))}">${esc(d.status||'Pendente')}</span></div>
