@@ -1076,3 +1076,21 @@ html[data-theme="light"] .project-selection-grid .project:hover{
 .project-selection-grid .project-selection-info .sub{font-size:18px;text-align:center}
 @media(max-width:1100px){.project-selection-panel{width:min(100%,760px);padding:22px 26px 32px}.project-selection-panel .project-selection-grid{grid-template-columns:repeat(2,minmax(0,310px));gap:38px}}
 @media(max-width:700px){.project-selection-panel{width:100%;padding:18px}.project-selection-panel .project-selection-grid{grid-template-columns:minmax(0,310px);gap:26px}.project-selection-grid .project{min-height:340px}.project-selection-grid .project .letter{width:125px;height:125px;flex-basis:125px}}
+
+/* Proporção interna conforme referência: conteúdo preenche melhor o cartão */
+.project-selection-panel .project-selection-grid .project{
+  min-height:310px;
+  padding:18px 14px;
+  justify-content:center;
+}
+.project-selection-panel .project-selection-grid .project .letter{
+  width:150px;height:150px;flex:0 0 150px;
+  margin:0 0 12px;border-radius:20px;font-size:72px;
+}
+.project-selection-panel .project-selection-grid .project-selection-info{gap:5px}
+.project-selection-panel .project-selection-grid .project-selection-info b{font-size:33px;line-height:1.12}
+.project-selection-panel .project-selection-grid .project-selection-info .sub{font-size:18px}
+@media(max-width:700px){
+  .project-selection-panel .project-selection-grid .project{min-height:295px;padding:16px 12px}
+  .project-selection-panel .project-selection-grid .project .letter{width:135px;height:135px;flex-basis:135px;font-size:64px}
+}
