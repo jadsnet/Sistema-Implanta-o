@@ -153,13 +153,45 @@ if(adminTab==='Usuários'){
 }
 if(adminTab==='Configurar projeto'){
  let p=project();if(!p){b.innerHTML='<div class="panel">Selecione um projeto na tela anterior.</div>';return}p.data=p.data||{};let template=p.data.activityTemplate||[];
- b.innerHTML=`<div class="panel admin-config"><div class="detailhead admin-config-head"><div><h3>Configurações do projeto: ${esc(getName(p))}</h3><p class="muted">Importe a planilha de atividades e o modelo de runbook. O sistema identifica os cabeçalhos/colunas e só exibe os campos presentes no modelo deste projeto.</p></div><button class="secondary" id="openProject">Abrir projeto</button></div>
- <section class="admin-config-section"><h3>Foto de perfil do projeto</h3><p class="muted">Selecione uma imagem para aparecer no menu lateral quando este projeto estiver ativo.</p><div class="profile-config"><div class="profile-config-preview" id="profilePreview">${p.data.profilePhoto?`<img src="${esc(p.data.profilePhoto)}" alt="Foto atual do projeto">`:esc(getName(p).slice(0,1).toUpperCase())}</div><div><label class="filelabel">Escolher foto<input type="file" id="projectProfilePhoto" accept="image/png,image/jpeg,image/webp,image/gif"></label><button class="secondary" id="removeProjectPhoto" ${p.data.profilePhoto?'':'disabled'}>Remover foto</button><p class="small muted">PNG, JPG, WEBP ou GIF · até 1 MB</p></div></div><div id="cropEditor" class="crop-editor hidden"><p class="muted">Arraste a foto para enquadrar e use o controle para aproximar ou afastar.</p><canvas id="cropCanvas" width="280" height="280" aria-label="Prévia do recorte"></canvas><div class="crop-actions"><label>Zoom <input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1"></label><button id="cropSave" type="button">Salvar enquadramento</button><button class="secondary" id="cropCancel" type="button">Cancelar</button></div></div></section>
+ b.innerHTML=`<div class="panel admin-config"><div class="detailhead admin-config-head"><div><h3>Configurações do projeto: ${esc(getName(p))}</h3><p class="muted">Importe a planilha de atividades e o modelo de runbook. O sistema identifica os cabeçalhos/colunas e só exibe os campos presentes no modelo deste projeto.</p></div><div class="project-admin-actions"><button class="secondary" id="openProject">Abrir projeto</button><button class="danger-project" id="deleteProject">Remover projeto</button></div></div>
+ <section class="admin-config-section"><h3>Foto de perfil do projeto</h3><p class="muted">Selecione uma imagem para aparecer no menu lateral quando este projeto estiver ativo.</p><div class="profile-config"><div class="profile-config-preview" id="profilePreview">${p.data.profilePhoto?`<img src="${esc(p.data.profilePhoto)}" alt="Foto atual do projeto">`:esc(getName(p).slice(0,1).toUpperCase())}</div><div><label class="filelabel">Escolher foto<input type="file" id="projectProfilePhoto" accept="image/png,image/jpeg,image/webp,image/gif"></label><button class="secondary" id="removeProjectPhoto" ${p.data.profilePhoto?'':'disabled'}>Remover foto</button><p class="small muted">PNG, JPG, WEBP ou GIF · até 1 MB</p></div></div><div class="project-rename"><label for="projectNameEdit">Nome do projeto</label><div class="project-rename-controls"><input id="projectNameEdit" maxlength="100" value="${esc(getName(p))}" placeholder="Nome do projeto"><button type="button" id="saveProjectName">Salvar nome</button></div></div><div id="cropEditor" class="crop-editor hidden"><p class="muted">Arraste a foto para enquadrar e use o controle para aproximar ou afastar.</p><canvas id="cropCanvas" width="280" height="280" aria-label="Prévia do recorte"></canvas><div class="crop-actions"><label>Zoom <input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1"></label><button id="cropSave" type="button">Salvar enquadramento</button><button class="secondary" id="cropCancel" type="button">Cancelar</button></div></div></section>
  <section class="admin-config-section"><h3>Modelo de planilha do projeto</h3><p class="muted">Aceita CSV, XLS, XLSX, XLSM, ODS, TSV e DOCX. Após selecionar, confira os campos e clique em OK para aplicar.</p><label class="filelabel">Importar planilha do projeto<input type="file" id="projectCsv" accept=".csv,.txt,.tsv,.xls,.xlsx,.xlsm,.ods,.docx,.doc"></label><div id="projectPreview" class="import-preview"></div><div class="small muted" id="currentFields">Campos atuais: ${template.length?template.map(esc).join(' · '):'ainda não definido'}</div>
  </section><section class="admin-config-section"><h3>Modelo de planilha de runbook</h3><p class="muted">As linhas/colunas importadas definem as etapas e os campos do runbook. Não é necessário JSON.</p><label class="filelabel">Importar planilha do runbook<input type="file" id="projectRunbook" accept=".csv,.txt,.tsv,.xls,.xlsx,.xlsm,.ods,.docx,.doc"></label><div id="runbookPreview" class="import-preview"></div>
  </section><section class="admin-config-section"><h3>Criar campos adicionais</h3><p class="muted">Adicione campos próprios a este projeto sem alterar os outros projetos.</p><div class="filters"><input id="extraFieldName" placeholder="Nome do novo campo"><button id="addExtraField" class="secondary">Adicionar campo</button></div><div class="small muted">Campos adicionais: ${(p.data.extraFields||[]).map(esc).join(' · ')||'nenhum'}</div>
  </section><section class="admin-config-section"><h3>Cadastrar nova atividade</h3><div class="row" id="newActivityFields"></div><button id="createActivity" style="margin-top:12px">Cadastrar atividade</button></section></div>`;
  $('#openProject').onclick=()=>{page='home';selectedActivity=null;render()};
+ $('#saveProjectName').onclick=()=>{
+  const name=$('#projectNameEdit').value.trim(),oldName=getName(p);
+  if(!name)return toast('Informe o nome do projeto');
+  if(arr('projects').some(other=>other.id!==p.id&&getName(other).toLocaleLowerCase('pt-BR')===name.toLocaleLowerCase('pt-BR')))return toast('Já existe um projeto com esse nome');
+  if(name===oldName)return toast('O nome não foi alterado');
+  p.data.name=name;
+  arr('activities').forEach(a=>{if(a.data?.projectId===p.id&&a.data.row&&String(a.data.row.EMPRESA||'').trim().toLocaleLowerCase('pt-BR')===oldName.toLocaleLowerCase('pt-BR'))a.data.row.EMPRESA=name});
+  log('Nome do projeto alterado',oldName+' → '+name);
+  save();render();toast('Nome do projeto atualizado');
+ };
+ $('#deleteProject').onclick=()=>{
+  const name=getName(p);
+  const overlay=document.createElement('div');overlay.className='project-delete-overlay';
+  overlay.innerHTML=`<div class="project-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteProjectTitle"><h3 id="deleteProjectTitle">Remover projeto?</h3><p>Você está prestes a excluir <strong>${esc(name)}</strong> e seus dados vinculados (atividades e runbooks). Esta ação não pode ser desfeita.</p><p class="muted small">Para confirmar, digite o nome exato do projeto:</p><input id="deleteProjectConfirmation" autocomplete="off" placeholder="${esc(name)}"><div class="project-delete-actions"><button type="button" class="secondary" id="cancelDeleteProject">Cancelar</button><button type="button" class="danger-project" id="confirmDeleteProject" disabled>Excluir definitivamente</button></div></div>`;
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  overlay.querySelector('#cancelDeleteProject').onclick=close;
+  overlay.onclick=e=>{if(e.target===overlay)close()};
+  overlay.querySelector('#deleteProjectConfirmation').oninput=e=>{overlay.querySelector('#confirmDeleteProject').disabled=e.target.value.trim()!==name};
+  overlay.querySelector('#confirmDeleteProject').onclick=()=>{
+   if(overlay.querySelector('#deleteProjectConfirmation').value.trim()!==name)return;
+   const ids=new Set(arr('activities').filter(a=>a.data?.projectId===p.id).map(a=>a.id));
+   DB.activities=arr('activities').filter(a=>!ids.has(a.id));
+   DB.runbooks=arr('runbooks').filter(r=>r.data?.projectId!==p.id&&!ids.has(r.data?.activityId)&&!ids.has(r.data?.actId));
+   DB.projects=arr('projects').filter(x=>x.id!==p.id);
+   localStorage.removeItem('gi_search_'+p.id);
+   projectId=null;selectedActivity=null;adminTab='Projetos';filterStatus='Todos';
+   log('Projeto removido',name+' ('+ids.size+' atividades excluídas)');
+   save();close();render();toast('Projeto removido');
+  };
+  overlay.querySelector('#deleteProjectConfirmation').focus();
+ };
  let cropImage=null,cropScale=1,cropX=0,cropY=0;
  const canvas=$('#cropCanvas'),ctx=canvas.getContext('2d');
  function drawCrop(){if(!cropImage)return;let side=canvas.width,base=Math.max(side/cropImage.width,side/cropImage.height),w=cropImage.width*base*cropScale,h=cropImage.height*base*cropScale;cropX=Math.min(0,Math.max(side-w,cropX));cropY=Math.min(0,Math.max(side-h,cropY));ctx.clearRect(0,0,side,side);ctx.drawImage(cropImage,cropX,cropY,w,h)}

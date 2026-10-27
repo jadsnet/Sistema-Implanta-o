@@ -555,3 +555,18 @@ html[data-theme="light"] .report-columns input{accent-color:#7b20c1!important}
 html[data-theme="light"] .report-dialog-actions #cancelActivityReport{background:#806299!important;color:#fff!important}
 html[data-theme="light"] .report-dialog-actions #downloadActivityReport{background:#7422b7!important;color:#fff!important}
 @media(max-width:520px){.report-dialog{padding:18px}.report-columns label{padding:11px 12px}}
+
+.project-admin-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.project-rename{margin-top:18px;max-width:490px}
+.project-rename label{display:block;margin-bottom:8px;font-weight:700}
+.project-rename-controls{display:flex;gap:10px;flex-wrap:wrap}
+.project-rename-controls input{flex:1;min-width:190px}
+.danger-project{background:#96345f;color:#fff;border:1px solid #b9547e;border-radius:10px;padding:10px 14px;cursor:pointer}
+.danger-project:hover:not(:disabled){background:#b03967}
+.danger-project:disabled{opacity:.45;cursor:not-allowed}
+.project-delete-overlay{position:fixed;inset:0;z-index:99999;background:rgba(10,4,22,.78);display:flex;align-items:center;justify-content:center;padding:20px}
+.project-delete-dialog{width:min(100%,470px);background:#302044;color:#f5ebff;border:1px solid #77528f;border-radius:18px;box-shadow:0 22px 65px #08031399;padding:26px}
+.project-delete-dialog h3{margin:0 0 15px;color:#fff}
+.project-delete-dialog p{line-height:1.55}
+.project-delete-dialog input{width:100%;box-sizing:border-box;margin:8px 0 18px;background:#4b3263;color:#fff;border:1px solid #8563a0;border-radius:9px;padding:12px}
+.project-delete-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
