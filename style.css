@@ -783,3 +783,7 @@ html:not([data-theme="light"]) .activity-detail-screen .stamp-panel{--stamp-fram
 .stats .stat[data-statusfilter="Quebra"] .stat-emoji{display:flex!important;align-items:center!important;justify-content:center!important}
 .stats .stat[data-statusfilter="Quebra"] .stat-emoji .e{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;inset:0!important}
 .evidence-remove,.runbook-detail .evidence-remove{display:flex!important;align-items:center!important;justify-content:center!important;width:32px!important;height:25px!important;line-height:1!important;padding:0!important;border-radius:8px!important;font-size:18px!important;font-weight:600!important;box-shadow:-3px 5px 10px rgba(26,10,39,.34)!important}
+
+/* Remove apenas a planilha selecionada antes de confirmar a importação. */
+.clear-import-file{display:inline-grid;place-items:center;vertical-align:middle;margin-left:10px;width:31px;height:29px;padding:0;background:#713c9b;color:#f6eaff;border-radius:8px;font-size:19px;font-weight:700;line-height:1;box-shadow:3px 5px 11px #24103535;cursor:pointer}
+.clear-import-file:hover{background:#8748b3}
