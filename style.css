@@ -682,3 +682,39 @@ html[data-theme="light"] .project-rename>label{color:#f5e8ff!important}
 .activity-detail-screen #generateSaeStamp img{width:auto!important;height:100%!important;max-width:100%!important;object-fit:contain!important;object-position:center!important}
 .activity-detail-screen #generateMerakiStamp img{width:92%!important;height:auto!important;max-height:80%!important;object-fit:contain!important;object-position:center!important}
 @media(max-width:480px){.activity-detail-screen .stamp-panel{margin-right:0}}
+
+/* Moldura dos carimbos: traço fino em L, na cor do título */
+.activity-detail-screen .stamp-panel{
+  border-left:0!important;
+  padding-left:24px!important;
+  position:relative;
+}
+.activity-detail-screen .stamp-panel-heading{
+  color:var(--text,#f1e3fa)!important;
+  position:relative;
+}
+.activity-detail-screen .stamp-panel-heading::after{
+  background:currentColor!important;
+  height:1.5px!important;
+  opacity:1!important;
+}
+.activity-detail-screen .stamp-panel::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:12px;
+  width:1.5px;
+  background:var(--text,#f1e3fa);
+  border-radius:2px;
+}
+.activity-detail-screen .stamp-panel-heading::before{
+  content:"";
+  position:absolute;
+  left:-24px;
+  top:0;
+  width:19px;
+  height:1.5px;
+  background:currentColor;
+  border-radius:2px;
+}
