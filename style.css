@@ -765,3 +765,14 @@ html[data-theme="light"] .project-rename>label{color:#f5e8ff!important}
   background:var(--text,#f1e3fa)!important;
   border-radius:0!important;
 }
+
+/* Carimbos: título e moldura exatamente na mesma cor suave, por tema. */
+html[data-theme="light"] .activity-detail-screen .stamp-panel-heading,
+html:not([data-theme="light"]) .activity-detail-screen .stamp-panel-heading{
+  color:var(--stamp-frame-color)!important;
+}
+html[data-theme="light"] .activity-detail-screen .stamp-panel{--stamp-frame-color:#a18aaa}
+html:not([data-theme="light"]) .activity-detail-screen .stamp-panel{--stamp-frame-color:#867097}
+.activity-detail-screen .stamp-panel::before{background:var(--stamp-frame-color)!important}
+.activity-detail-screen .stamp-panel-heading::before,
+.activity-detail-screen .stamp-panel-heading::after{background:var(--stamp-frame-color)!important}
