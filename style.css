@@ -610,3 +610,7 @@ html[data-theme="light"] #toast.toast-visible, html[data-theme="light"] .toast.t
  border-color:rgba(51,133,79,.28)!important;
  box-shadow:0 5px 14px rgba(49,90,60,.11)!important;
 }
+
+/* Fonte verde mais clara, mantendo o aviso discreto */
+#toast.toast-visible, .toast.toast-visible { color:#d0f8df!important; text-shadow:0 1px 1px rgba(12,48,30,.18); }
+html[data-theme="light"] #toast.toast-visible, html[data-theme="light"] .toast.toast-visible { color:#e1ffe9!important; background:rgba(39,113,72,.56)!important; border-color:rgba(72,153,101,.45)!important; }
