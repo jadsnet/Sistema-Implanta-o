@@ -631,3 +631,19 @@ html[data-theme="light"] #adminBody .muted{color:#ecd6f5!important;text-shadow:0
 .activity-detail-screen .stamp-actions{display:flex;flex-direction:column;align-items:flex-end;gap:9px;margin-top:12px}
 .activity-detail-screen .stamp-actions button{width:190px;max-width:100%;text-align:center}
 @media(max-width:600px){.activity-detail-screen .activity-summary > .field:has(#activityStatus){max-width:100%}}
+
+/* Ajustes de alinhamento do painel de projeto */
+.profile-config{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin:16px 0 12px}
+.profile-config-preview{width:88px;height:88px;flex:0 0 88px;margin:0}
+.profile-config-actions{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:7px;min-width:0}
+.profile-config-buttons{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.profile-config-buttons .filelabel{margin:0!important}
+.profile-config-buttons #removeProjectPhoto{margin:0!important}
+.profile-config-actions .small{margin:0!important;line-height:1.4}
+.project-rename>label{display:block;font-size:15px;font-weight:700;letter-spacing:0;margin:0 0 10px;color:inherit}
+html[data-theme="light"] .project-rename>label{color:#f5e8ff!important}
+.extra-fields-list{width:min(100%,650px);max-width:100%;justify-items:stretch}
+.extra-field-row{width:100%;box-sizing:border-box;min-height:47px}
+.extra-field-delete{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:34px;flex-shrink:0;cursor:pointer}
+.extra-field-delete svg{display:block;stroke:#ffd7dc}
+@media(max-width:600px){.profile-config-buttons{align-items:flex-start}.extra-fields-list{width:100%}}
