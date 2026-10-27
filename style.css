@@ -1094,3 +1094,14 @@ html[data-theme="light"] .project-selection-grid .project:hover{
   .project-selection-panel .project-selection-grid .project{min-height:295px;padding:16px 12px}
   .project-selection-panel .project-selection-grid .project .letter{width:135px;height:135px;flex-basis:135px;font-size:64px}
 }
+
+/* Uniformiza a sombra dos indicadores com a Filtragem customizada.
+   Mantém intactos dimensões, cores, filtros e disposição dos cartões. */
+html:not([data-theme="light"]) .stats > .stat,
+html[data-theme="light"] .stats > .stat {
+  box-shadow: 7px 11px 17px -3px rgba(17, 6, 29, .43), 3px 5px 9px rgba(17, 6, 29, .20) !important;
+}
+html:not([data-theme="light"]) .stats > .stat:hover,
+html[data-theme="light"] .stats > .stat:hover {
+  box-shadow: 9px 15px 22px -3px rgba(17, 6, 29, .49), 4px 7px 12px rgba(17, 6, 29, .24) !important;
+}
