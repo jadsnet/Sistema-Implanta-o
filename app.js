@@ -124,7 +124,7 @@ function activityDetail(id,mode='view'){
  <div class="filters">${!d.analystName?`<button id="adoptActivity">Adotar atividade</button>`:canEdit&&!d.endAt?`<button class="danger" id="abandonActivity">Abandonar atividade</button>`:""}</div></div>
  ${canEdit?`<div class="stamp-panel"><div class="stamp-panel-heading"><span>Carimbos</span></div><div class="stamp-actions"><button class="stamp-logo-btn" id="generateSaeStamp" title="Gerar carimbo SAE" aria-label="Gerar carimbo SAE"><img src="sae-button.png" alt="SAE"></button><button class="stamp-logo-btn" id="generateMerakiStamp" title="Gerar carimbo Meraki" aria-label="Gerar carimbo Meraki"><img src="meraki-button.png" alt="Cisco Meraki"></button></div></div>`:'<p class="small muted">Somente o analista responsável pode editar esta atividade.</p>'}</div>
  <p class="small muted">Alterações são salvas automaticamente neste navegador. Os carimbos são copiados para a área de transferência.</p></section>
- ${visibleGroups.map(g=>`<section class="info-section"><h3 class="floating-title">${esc(g[0])}</h3><div class="info-grid">${g[1].map(field).join('')}</div></section>`).join('')}</div>`;
+ ${visibleGroups.map(g=>`<section class="info-section"><h3 class="floating-title">${esc(g[0])}</h3><div class="info-grid">${g[0]==='Localização / Unidade'?`<div class="location-main-fields">${g[1].filter(k=>!contactFields.includes(k)).map(field).join('')}</div><div class="location-contact-fields">${contactFields.filter(k=>g[1].includes(k)).map(field).join('')}</div>`:g[1].map(field).join('')}</div></section>`).join('')}</div>`;
 }
 function wireDetail(){
  if(!$('.activity-detail-screen'))return;

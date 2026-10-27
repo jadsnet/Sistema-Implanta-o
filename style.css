@@ -958,3 +958,37 @@ html:not([data-theme="light"]) .activity-line:hover{
 .project-selection-grid .project-selection-info .sub{margin:0;font-size:12px}
 @media(max-width:950px){.project-selection-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.project-selection-grid{grid-template-columns:1fr;gap:12px}}
+
+/* Cartões de projetos: conteúdo centralizado e destaque flutuante */
+.project-selection-grid .project{
+  display:flex;justify-content:center;align-items:center;text-align:left;
+  min-height:148px;padding:24px 22px;gap:22px;
+  box-shadow:7px 11px 19px rgba(30,13,46,.30),2px 4px 7px rgba(30,13,46,.13)!important;
+}
+.project-selection-grid .project:hover{
+  box-shadow:9px 15px 24px rgba(30,13,46,.35),3px 5px 9px rgba(30,13,46,.15)!important;
+}
+.project-selection-grid .project .letter{
+  width:82px;height:82px;flex:0 0 82px;border-radius:18px;font-size:39px;
+}
+.project-selection-grid .project .letter img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.project-selection-grid .project-selection-info{flex:0 1 auto;max-width:calc(100% - 104px);gap:9px}
+.project-selection-grid .project-selection-info b{font-size:21px;line-height:1.2}
+.project-selection-grid .project-selection-info .sub{font-size:14px}
+html[data-theme="light"] .project-selection-grid .project{
+  box-shadow:7px 11px 19px rgba(64,31,87,.29),2px 4px 7px rgba(64,31,87,.13)!important;
+}
+html[data-theme="light"] .project-selection-grid .project:hover{
+  box-shadow:9px 15px 24px rgba(64,31,87,.35)!important;
+}
+/* Linha própria para os quatro contatos, independente do total de outros campos */
+.info-grid:has(> .location-main-fields){display:block}
+.location-main-fields,.location-contact-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.location-contact-fields{margin-top:12px}
+@media(max-width:1000px){.location-main-fields,.location-contact-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){
+ .project-selection-grid .project{min-height:120px;gap:16px}
+ .project-selection-grid .project .letter{width:66px;height:66px;flex-basis:66px;font-size:30px}
+ .project-selection-grid .project-selection-info b{font-size:18px}
+ .location-main-fields,.location-contact-fields{grid-template-columns:1fr}
+}
