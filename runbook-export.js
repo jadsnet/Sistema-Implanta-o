@@ -48,14 +48,16 @@ async function exportCopasaRunbook(activity, evidenceImages) {
   // Inserir imagens sem reconstruir o arquivo: mantém as demais abas e a formatação Excel.
   const drawingNS='http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing';
   const relNS='http://schemas.openxmlformats.org/package/2006/relationships';
-  // oneCellAnchor preserva a proporção original; a imagem cabe na área reservada.
-  const pictureAnchor=(rid,picId,fromRow,toRow,fromCol=0,toCol=1,dimensions={width:1000,height:700})=>{
-    const maxW=toCol-fromCol===1?7150000:3500000;
-    const maxH=Math.max(1,toRow-fromRow)*380000;
-    const ratio=dimensions.width/dimensions.height;
-    const w=Math.round(Math.min(maxW,maxH*ratio)),h=Math.round(w/ratio);
-    const xOff=Math.max(0,Math.round((maxW-w)/2));
-    return `<xdr:oneCellAnchor><xdr:from><xdr:col>${fromCol}</xdr:col><xdr:colOff>${xOff}</xdr:colOff><xdr:row>${fromRow}</xdr:row><xdr:rowOff>20000</xdr:rowOff></xdr:from><xdr:ext cx="${w}" cy="${h}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${picId}" name="Evidência ${picId}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
+  // Âncoras em pixels convertidos para EMU. Cada foto ocupa a área da sua
+  // própria linha de conteúdo, começando ABAIXO da faixa amarela.
+  const EMU=9525;
+  const pictureAnchor=(rid,picId,fromRow,toRow,fromCol=0,toCol=1,dimensions={width:1000,height:700},kind='evidence')=>{
+    const availableW=kind==='photos'?445:790;
+    const availableH=kind==='photos'?322:(fromRow===3?475:515);
+    const scale=Math.min(availableW/dimensions.width,availableH/dimensions.height);
+    const w=Math.round(dimensions.width*scale*EMU),h=Math.round(dimensions.height*scale*EMU);
+    const left=kind==='photos'?8:10,top=kind==='photos'?6:8;
+    return `<xdr:oneCellAnchor><xdr:from><xdr:col>${fromCol}</xdr:col><xdr:colOff>${left*EMU}</xdr:colOff><xdr:row>${fromRow}</xdr:row><xdr:rowOff>${top*EMU}</xdr:rowOff></xdr:from><xdr:ext cx="${w}" cy="${h}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${picId}" name="Evidência ${picId}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
   };
   async function pngData(src) {
     if(!src || !src.startsWith('data:image/'))return null;
@@ -72,7 +74,7 @@ async function exportCopasaRunbook(activity, evidenceImages) {
   if(!content.includes('/xl/drawings/drawing4.xml'))content=content.replace('</Types>','<Override PartName="/xl/drawings/drawing4.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');
   zip.file(contentName,content);
   // A aba Registro de Evidências já usa drawing2.xml; a aba Fotos recebe drawing4.xml.
-  const plans=[{drawing:2,first:0,last:6,positions:[[2,4],[5,7],[8,10],[11,13],[14,16],[17,19]]},{drawing:4,first:6,last:8,positions:[[2,3],[5,6]]}];
+  const plans=[{drawing:2,first:0,last:6,positions:[[3,4],[6,7],[9,10],[12,13],[15,16],[18,19]]},{drawing:4,first:6,last:8,positions:[[2,3],[5,6]]}];
   for(const plan of plans){
     const drawingPath=`xl/drawings/drawing${plan.drawing}.xml`;
     const relPath=`xl/drawings/_rels/drawing${plan.drawing}.xml.rels`;
@@ -84,7 +86,7 @@ async function exportCopasaRunbook(activity, evidenceImages) {
       const rid=`rIdRunbook${i+1}`, media=`runbook_evidence_${i+1}.png`;
       zip.file(`xl/media/${media}`,picture.encoded,{base64:true});
       rels=rels.replace('</Relationships>',`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/${media}"/></Relationships>`);
-      const [from,to]=plan.positions[i-plan.first];anchorXml+=pictureAnchor(rid,500+i,from,to,0,1,picture);
+      const [from,to]=plan.positions[i-plan.first];anchorXml+=pictureAnchor(rid,500+i,from,to,plan.drawing===4?0:1,plan.drawing===4?1:2,picture,plan.drawing===4?'photos':'evidence');
     }
     if(plan.drawing===4 || anchorXml){
       if(!drawing.includes('xmlns:r='))drawing=drawing.replace('<xdr:wsDr ', '<xdr:wsDr xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ');

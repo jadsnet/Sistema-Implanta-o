@@ -59,11 +59,11 @@ function stampValue(a,keys){
 function makeActivityStamp(a,type){
  const v=(...keys)=>stampValue(a,keys), id=activityName(a), operator=v('OPERADORA'), product=v('PRODUTO'),
  dedicated=v('ID DEDICADO','ID INTERNET','ID LINK'), lp=v('LP'), speed=v('VELOCIDADE DO LINK','VELOCIDADE'),
- net=v('NETWORK','REDE'), serial=v('SERIAL NUMBER','SERIAL','NUMERO DE SERIE','NÚMERO DE SÉRIE'),
+ net=v('NETWORK','REDE'), serial=v('SERIAL MX','SERIAL NUMBER','SERIAL','NUMERO DE SERIE','NÚMERO DE SÉRIE'),
  ip=calculateMxIp(v('IP LINK'))||v('IP LAN MERAKI','IP MX'), service=v('TIPO DE ATENDIMENTO'), repair=v('REPARO');
  const link=`ID VGR - ${id}\nLink 1: ${operator}\nTIPO: ${product}\nID: ${dedicated}\nLP: ${lp}\nVEL: ${speed}${/\b(MB|GB|KB)\b|MBPS|GBPS/i.test(speed)?'':' MB'}`;
  if(type==='meraki')return `${link}\nReparo : ${repair}`;
- return `SAE\n\nSegue para validação,\n\nObs. A solução foi entregue com licença Trial, a licença definitiva será ativa em breve, a informação foi passada ao time do NOC, Sr. Eduardo Vital Barbosa está ciente do tema.\n\nTrata-se de solução Cisco Meraki: SITE SPOKE\n\nCliente: ${getName(project())==='COPASA'?'COPASA - Companhia de Saneamento de Minas Gerais':getName(project())}\n\nORGANIZAÇÃO MERAKI: SDWAN - ${getName(project()).toUpperCase()}\nNETWORK: ${net}\nSerial number: ${serial}\n\nINFORMAÇÕES DO LINK:\n${link}\nTIPO DE ATENDIMENTO: ${service}\nIP MX: ${ip}`;
+ return `Segue para validação,\n\nObs. A solução foi entregue com licença Trial, a licença definitiva será ativa em breve, a informação foi passada ao time do NOC, Sr. Eduardo Vital Barbosa está ciente do tema.\n\nTrata-se de solução Cisco Meraki: SITE SPOKE\n\nCliente: ${getName(project())==='COPASA'?'COPASA - Companhia de Saneamento de Minas Gerais':getName(project())}\n\nORGANIZAÇÃO MERAKI: SDWAN - ${getName(project()).toUpperCase()}\nNETWORK: ${net}\nSerial number: ${serial}\n\nINFORMAÇÕES DO LINK:\n${link}\nTIPO DE ATENDIMENTO: ${service}\nIP MX: ${ip}`;
 }
 async function copyActivityStamp(a,type){
  if(a.data.analystName!==currentUser())return toast('Apenas o responsável pode gerar carimbos');
@@ -96,10 +96,11 @@ function activityDetail(id,mode='view'){
  const groups=[
  ['Equipamento',keys.filter(k=>k==='REPARO'||(k!=='IP LINK'&& !/velocidade/i.test(k)&&k!=='TIPO DE ATENDIMENTO'&&/equip|modelo|serial|qtd|quantidade|lote|host|network|rede|ip/i.test(k)))],
  ['Link',keys.filter(k=>k==='TIPO DE ATENDIMENTO'||(k!=='ID VGR'&&/dedicado|internet|\blp\b|velocidade|produto|meio|operadora|link/i.test(k)))],
- ['Localização',keys.filter(k=>/endere|munic|cidade|coord|uf|cep/i.test(k))],
+ ['Localização',keys.filter(k=>/endere|munic|cidade|coord|uf|cep/i.test(k)&&!/velocidade/i.test(k))],
  ['Outras informações',keys.filter(k=>k!=='ID VGR'&&!/equip|modelo|serial|qtd|quantidade|lote|host|network|rede|ip|dedicado|internet|\blp\b|velocidade|produto|meio|operadora|link|endere|munic|cidade|coord|uf|cep|^(TIPO DE ATENDIMENTO|REPARO)$/i.test(k))]
  ];
- for(const x of extraDefinitions){for(const g of groups)g[1]=g[1].filter(k=>k!==x.name);let dest=groups.find(g=>g[0]===x.section)||groups[3];dest[1].push(x.name)}
+ for(const x of extraDefinitions){for(const g of groups)g[1]=g[1].filter(k=>k!==x.name);let dest=groups.find(g=>g[0]===x.section)||groups[3];if(/velocidade do link/i.test(x.name))dest=groups[1];dest[1].push(x.name)}
+ const assignedFields=new Set();for(const g of [groups[1],groups[0],groups[2],groups[3]])g[1]=g[1].filter(k=>{if(assignedFields.has(k))return false;assignedFields.add(k);return true});
  const visibleGroups=groups.filter(g=>g[1].length);
  const finalStatus=['Migrada','Quebra'].includes(d.status);
  return `<div class="activity-detail-screen"><div class="detailhead detail-toolbar"><button class="secondary" id="closeDetail">← Voltar à busca</button><span class="status ${esc(normStatus(d.status))}">${esc(d.status||'Pendente')}</span></div>
