@@ -647,3 +647,9 @@ html[data-theme="light"] .project-rename>label{color:#f5e8ff!important}
 .extra-field-delete{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:34px;flex-shrink:0;cursor:pointer}
 .extra-field-delete svg{display:block;stroke:#ffd7dc}
 @media(max-width:600px){.profile-config-buttons{align-items:flex-start}.extra-fields-list{width:100%}}
+
+.runbook-save-actions{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.runbook-save-actions button{background:#751dc1!important;color:#fff!important}
+.runbook-save-actions button:hover{filter:brightness(1.12)}
+.evidence-drop.evidence-readonly{cursor:default!important}
+.runbook-viewonly{font-size:13px;color:var(--muted);padding:12px 0}
