@@ -593,3 +593,20 @@ html[data-theme="light"] .stats .stat:hover{box-shadow:9px 16px 25px -5px rgba(5
  padding:14px 20px!important;box-shadow:0 9px 28px rgba(5,55,31,.38)!important;
  font-weight:700!important;opacity:1!important;visibility:visible!important;
 }
+
+/* Notificacoes discretas em verde translúcido, para os dois temas */
+#toast.toast-visible, .toast.toast-visible {
+ background:rgba(36,125,82,.24)!important;
+ color:#a8e6c0!important;
+ border:1px solid rgba(90,191,133,.38)!important;
+ box-shadow:0 5px 16px rgba(12,58,36,.14)!important;
+ font-weight:600!important;
+ backdrop-filter:blur(9px);
+ -webkit-backdrop-filter:blur(9px);
+}
+html[data-theme="light"] #toast.toast-visible, html[data-theme="light"] .toast.toast-visible {
+ background:rgba(75,158,107,.20)!important;
+ color:#226b47!important;
+ border-color:rgba(51,133,79,.28)!important;
+ box-shadow:0 5px 14px rgba(49,90,60,.11)!important;
+}
