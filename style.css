@@ -992,3 +992,21 @@ html[data-theme="light"] .project-selection-grid .project:hover{
  .project-selection-grid .project-selection-info b{font-size:18px}
  .location-main-fields,.location-contact-fields{grid-template-columns:1fr}
 }
+
+/* Seleção de projetos — cartões verticais conforme referência */
+.project-selection-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;align-items:stretch}
+.project-selection-grid .project{
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  text-align:center;min-height:290px;padding:30px 18px;gap:0;
+  border-radius:17px;border:0!important;
+  box-shadow:7px 10px 18px rgba(17,7,29,.35),inset 2px 2px 3px rgba(255,255,255,.17),inset -2px -2px 3px rgba(20,7,30,.16)!important;
+}
+.project-selection-grid .project:hover{transform:translateY(-4px);box-shadow:9px 15px 24px rgba(17,7,29,.4),inset 2px 2px 3px rgba(255,255,255,.2)!important}
+.project-selection-grid .project .letter{width:104px;height:104px;flex:0 0 104px;border-radius:20px;font-size:52px;margin:0 0 18px}
+.project-selection-grid .project-selection-info{display:flex;flex-direction:column;align-items:center;max-width:100%;gap:8px;flex:0 1 auto}
+.project-selection-grid .project-selection-info b{font-size:27px;line-height:1.15;text-align:center;overflow-wrap:anywhere}
+.project-selection-grid .project-selection-info .sub{font-size:16px;text-align:center;margin:0}
+html[data-theme="light"] .project-selection-grid .project{box-shadow:7px 10px 18px rgba(58,26,77,.32),inset 2px 2px 3px rgba(255,255,255,.24),inset -2px -2px 3px rgba(58,26,77,.13)!important}
+html[data-theme="light"] .project-selection-grid .project:hover{box-shadow:9px 15px 24px rgba(58,26,77,.38),inset 2px 2px 3px rgba(255,255,255,.26)!important}
+@media(max-width:950px){.project-selection-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.project-selection-grid{grid-template-columns:1fr;gap:16px}.project-selection-grid .project{min-height:245px;padding:24px 16px}.project-selection-grid .project .letter{width:90px;height:90px;flex-basis:90px;font-size:44px}.project-selection-grid .project-selection-info b{font-size:24px}}
