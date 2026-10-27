@@ -934,3 +934,17 @@ html:not([data-theme="light"]) .activity-line:hover{
   background:#423052!important;
   filter:none;
 }
+
+/* Detalhes da atividade: painel compacto, carimbos no topo à direita. */
+.activity-detail-screen .activity-summary{padding:17px 20px 14px;margin-bottom:24px}
+.activity-detail-screen .activity-summary h2{margin:5px 0 9px}
+.activity-detail-screen .activity-summary > p.muted{margin:8px 0}
+.activity-detail-screen .activity-summary-layout{display:grid;grid-template-columns:minmax(0,1fr) 215px;gap:24px;align-items:start;margin-top:12px}
+.activity-detail-screen .activity-summary-controls{width:100%;max-width:520px;min-width:0}
+.activity-detail-screen .activity-summary-controls > .field:has(#activityStatus){max-width:100%;width:100%}
+.activity-detail-screen .activity-summary-controls .filters{margin:12px 0 0}
+.activity-detail-screen .activity-summary-controls .activity-observations{margin-top:13px}
+.activity-detail-screen .activity-summary-controls .activity-observations textarea{width:100%;min-height:82px;height:88px;resize:vertical;padding:10px 12px;line-height:1.45}
+.activity-detail-screen .activity-summary-layout .stamp-panel{grid-column:2;grid-row:1;width:215px!important;max-width:100%;margin:0 0 0 auto!important;align-self:start}
+.activity-detail-screen .activity-summary > p:last-child{margin:10px 0 0}
+@media(max-width:720px){.activity-detail-screen .activity-summary-layout{grid-template-columns:minmax(0,1fr);gap:20px}.activity-detail-screen .activity-summary-controls{max-width:100%}.activity-detail-screen .activity-summary-layout .stamp-panel{grid-column:1;grid-row:auto;margin:0 auto 0 0!important}}
