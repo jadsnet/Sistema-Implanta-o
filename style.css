@@ -814,3 +814,8 @@ html[data-theme="light"] .login-card{border:0!important;box-shadow:12px 17px 32p
 .login-overlay::before,.login-overlay::after{background-image:url('vivo-bonequinho.svg')!important;filter:none!important;opacity:.11!important}
 html[data-theme="light"] .login-overlay::before,html[data-theme="light"] .login-overlay::after{opacity:.12!important}
 .login-brand-icon svg{width:40px!important;height:40px!important}
+
+/* Bonequinho Vivo fiel ao arquivo original: proporção preservada. */
+.login-brand-icon{position:relative;flex-shrink:0}
+.login-brand-icon::after{content:"";display:block;width:34px;height:43px;background:#fff;mask:url('vivo-bonequinho.svg') center/contain no-repeat;-webkit-mask:url('vivo-bonequinho.svg') center/contain no-repeat}
+.login-overlay::before,.login-overlay::after{background-size:contain!important;background-repeat:no-repeat!important}
