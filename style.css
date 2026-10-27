@@ -916,3 +916,21 @@ html[data-theme="light"] .stats > .custom-filter-card .custom-filter-icon {
 html[data-theme="light"] .stats > .custom-filter-card {
   box-shadow: 7px 11px 17px -3px rgba(17, 6, 29, .43), 3px 5px 9px rgba(17, 6, 29, .20) !important;
 }
+
+/* Linhas de atividades: clareamento sutil inspirado na lista do Runbook. */
+html[data-theme="light"] .activity-line{
+  background:#a58bbb!important;
+  transition:background-color .16s ease,box-shadow .16s ease,filter .16s ease;
+}
+html[data-theme="light"] .activity-line:hover{
+  background:#b49bc8!important;
+  filter:none;
+}
+html:not([data-theme="light"]) .activity-line{
+  background:#332243!important;
+  transition:background-color .16s ease,box-shadow .16s ease,filter .16s ease;
+}
+html:not([data-theme="light"]) .activity-line:hover{
+  background:#423052!important;
+  filter:none;
+}
