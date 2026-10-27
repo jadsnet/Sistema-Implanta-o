@@ -570,3 +570,10 @@ html[data-theme="light"] .report-dialog-actions #downloadActivityReport{backgrou
 .project-delete-dialog p{line-height:1.55}
 .project-delete-dialog input{width:100%;box-sizing:border-box;margin:8px 0 18px;background:#4b3263;color:#fff;border:1px solid #8563a0;border-radius:9px;padding:12px}
 .project-delete-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+
+/* Relevo flutuante dos cartões de indicadores, sem alterar sua geometria */
+html:not([data-theme="light"]) .stats .stat{box-shadow:0 13px 19px -7px rgba(5,0,13,.78),0 5px 9px rgba(12,3,24,.48),inset 0 1px 0 rgba(255,255,255,.035)!important;}
+html[data-theme="light"] .stats .stat{box-shadow:0 13px 19px -7px rgba(54,22,79,.40),0 5px 10px rgba(72,37,98,.19),inset 0 1px 0 rgba(255,255,255,.12)!important;}
+.stats .stat:hover{transform:translateY(-2px);}
+html:not([data-theme="light"]) .stats .stat:hover{box-shadow:0 16px 23px -7px rgba(5,0,13,.85),0 7px 13px rgba(12,3,24,.5)!important;}
+html[data-theme="light"] .stats .stat:hover{box-shadow:0 16px 23px -7px rgba(54,22,79,.48),0 7px 13px rgba(72,37,98,.24)!important;}
