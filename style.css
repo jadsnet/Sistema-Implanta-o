@@ -1249,3 +1249,11 @@ html[data-theme="light"] .new-activity-overlay .new-activity-section{background:
 html[data-theme="light"] .new-activity-overlay .new-activity-grid input{background:#74518c!important}
 @media(max-width:700px){.new-activity-overlay .new-activity-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:480px){.new-activity-overlay .new-activity-grid{grid-template-columns:1fr!important}}
+/* Importação dinâmica: prévia do modelo lido da planilha por projeto. */
+.runbook-import-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;max-height:390px;overflow:auto;margin:12px 0;padding:2px}
+.runbook-import-summary>div{background:rgba(139,97,170,.13);border:1px solid rgba(165,130,195,.2);padding:12px;border-radius:11px;min-width:0}
+.runbook-import-summary b{display:inline-block;margin-bottom:8px}
+.runbook-import-summary ul{list-style:none;padding:0;margin:0;max-height:245px;overflow:auto}
+.runbook-import-summary li{padding:8px 0;border-bottom:1px solid rgba(180,155,194,.16);font-size:12px}
+.runbook-import-summary li small{display:block;margin-top:5px;line-height:1.45;opacity:.8;font-style:italic}
+html[data-theme="light"] .runbook-import-summary>div{background:rgba(255,255,255,.16);border-color:rgba(69,38,92,.15)}
