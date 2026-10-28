@@ -1151,3 +1151,15 @@ html[data-theme="light"] .new-activity-section{background:rgba(255,255,255,.075)
 .config-builder-col .extra-fields-list{margin-top:15px}
 @media(max-width:900px){.config-builder{grid-template-columns:1fr!important}.config-builder-col+.config-builder-col{border-left:0;border-top:1px solid rgba(236,217,250,.25);padding:22px 0 0}.new-activity-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:560px){.new-activity-grid{grid-template-columns:1fr!important}}
+
+/* Cadastro de atividade: espelhar proporções e superfícies da atividade padrão */
+.new-activity-overlay .new-activity-dialog{background:var(--panel2)!important;max-height:94vh!important;padding:20px 18px!important}
+.new-activity-overlay .new-activity-head{top:-20px!important;padding:8px 0 18px!important;background:var(--panel2)!important}
+.new-activity-overlay .new-activity-section{background:var(--panel2)!important;padding:24px 16px 17px!important;margin:18px 0 26px!important;border-radius:16px!important;box-shadow:0 9px 20px rgba(40,17,59,.16)!important}
+.new-activity-overlay .new-activity-section-title{background:#60328b!important;color:white!important;border-radius:12px!important;padding:12px 16px!important;margin:-40px 0 16px!important;box-shadow:3px 6px 12px #0002!important}
+.new-activity-overlay .new-activity-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:13px 12px!important}
+.new-activity-overlay .new-activity-grid .field span{color:#eee0f7!important;font-size:10px!important;font-weight:600!important}
+.new-activity-overlay .new-activity-grid input{background:#74518c!important;color:#fff!important;border-radius:8px!important;height:39px!important}
+.new-activity-close{width:36px;height:34px;display:grid;place-items:center;background:#7917c7!important;color:white!important;font-size:23px;font-weight:700;line-height:1;border-radius:10px;box-shadow:3px 5px 10px #0003;flex-shrink:0}
+@media(max-width:900px){.new-activity-overlay .new-activity-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:560px){.new-activity-overlay .new-activity-grid{grid-template-columns:1fr!important}}
