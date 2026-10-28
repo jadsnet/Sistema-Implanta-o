@@ -274,10 +274,10 @@ if(adminTab==='Configurar projeto'){
  const sectionInput=$('#extraSectionName'),addSectionButton=$('#addExtraSection'),deleteSectionButton=$('#deleteSelectedSection');
  const defaultSections=['Equipamento','Link','Localização / Unidade','Outras informações'];
  const matchingSection=()=>[...defaultSections,...(p.data.extraSections||[])].find(x=>x.toLocaleLowerCase('pt-BR')===sectionInput.value.trim().toLocaleLowerCase('pt-BR'));
- const syncSectionEditor=()=>{const name=sectionInput.value.trim(),match=matchingSection();addSectionButton.hidden=!name||!!match;deleteSectionButton.hidden=!match||defaultSections.includes(match);};
+ const syncSectionEditor=()=>{const name=sectionInput.value.trim(),match=matchingSection();addSectionButton.hidden=!name||!!match;deleteSectionButton.hidden=!match;};
  sectionInput.addEventListener('input',syncSectionEditor);sectionInput.addEventListener('change',syncSectionEditor);syncSectionEditor();
  addSectionButton.onclick=()=>{const name=sectionInput.value.trim();if(!name)return toast('Informe o nome da seção');if(matchingSection())return toast('Esta seção já existe');p.data.extraSections=p.data.extraSections||[];p.data.extraSections.push(name);save();renderAdmin();toast('Seção cadastrada')};
- deleteSectionButton.onclick=()=>{const name=matchingSection();if(!name||defaultSections.includes(name))return toast('As seções padrão não podem ser excluídas');const fields=(p.data.extraFields||[]).filter(x=>typeof x==='object'&&x.section===name);const warning=fields.length?' Os '+fields.length+' campo(s) desta seção serão movidos para Outras informações, preservando seus valores.':'';if(!confirm('Excluir a seção "'+name+'"?'+warning))return;p.data.extraSections=(p.data.extraSections||[]).filter(x=>x!==name);fields.forEach(x=>x.section='Outras informações');save();renderAdmin();toast('Seção excluída')};
+ deleteSectionButton.onclick=()=>{const name=matchingSection();if(!name)return toast('Selecione uma seção existente');if(defaultSections.includes(name))return toast('As seções padrão são estruturais e não podem ser removidas sem comprometer a tela de atividades');const fields=(p.data.extraFields||[]).filter(x=>typeof x==='object'&&x.section===name);const warning=fields.length?' Os '+fields.length+' campo(s) desta seção serão movidos para Outras informações, preservando seus valores.':'';if(!confirm('Excluir a seção "'+name+'"?'+warning))return;p.data.extraSections=(p.data.extraSections||[]).filter(x=>x!==name);fields.forEach(x=>x.section='Outras informações');save();renderAdmin();toast('Seção excluída')};
  $('#openNewActivity').onclick=()=>openNewActivityDialog(p);
  const fieldInput=$('#extraFieldName'),fieldSection=$('#extraFieldSection'),addFieldButton=$('#addExtraField'),deleteFieldButton=$('#deleteSelectedField');
  const projectFieldNames=()=>[...new Set([...(p.data.activityTemplate||[]),...(p.data.extraFields||[]).map(x=>typeof x==='string'?x:x.name),...arr('activities').filter(a=>a.data.projectId===p.id).flatMap(a=>Object.keys(a.data.row||{}))])].filter(Boolean);
@@ -312,29 +312,40 @@ async function init(){resetTestDataOnce();const themeBtn=document.getElementById
 init();
 
 
-// Relatório de atividades: seleção explícita de colunas e exportação CSV compatível com Excel.
-const ACTIVITY_REPORT_COLUMNS=[
- ['vgr','ID VGR',a=>(a.data.row||{})['ID VGR']||''],
- ['link','ID link',a=>a.data.ed?.idDedicado||a.data.row?.['ID DEDICADO']||a.data.row?.['ID INTERNET']||''],
- ['localidade','Nome da localidade',a=>a.data.row?.['UNIDADE']||a.data.row?.['MUNICIPIO']||a.data.row?.['ENDEREÇO COMPLETO']||''],
- ['analista','Nome do analista da atividade',a=>a.data.analystName||''],
- ['data','Data',a=>{const d=activityDate(a);if(!d)return '';const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(d);return m?`${m[3]}/${m[2]}/${m[1]}`:d}],
- ['status','Status',a=>a.data.status||'Pendente'],
- ['observacao','Observação',a=>a.data.observacoes||a.data.observacao||a.data.observation||a.data.reason||'']
-];
+// Relatório flexível por colunas, status, analistas e formato.
 function openActivityReport(){
  document.getElementById('activityReportOverlay')?.remove();
+ const acts=projectActivities(),p=project();
+ const standard=[['ID VGR',a=>a.data.row?.['ID VGR']||''],['ID link',a=>a.data.ed?.idDedicado||a.data.row?.['ID DEDICADO']||''],['Nome da localidade',a=>a.data.row?.UNIDADE||a.data.row?.MUNICIPIO||''],['Nome do analista da atividade',a=>a.data.analystName||''],['Data',a=>{let d=activityDate(a)||'';return /^\d{4}-\d{2}-\d{2}$/.test(d)?d.split('-').reverse().join('/'):d}],['Status',a=>a.data.status||'Pendente'],['Observação',a=>a.data.observacoes||a.data.observacao||'']];
+ const keys=[...new Set([...(p?.data?.activityTemplate||[]),...(p?.data?.extraFields||[]).map(f=>typeof f==='string'?f:f.name),...acts.flatMap(a=>Object.keys(a.data.row||{}))])].filter(Boolean);
+ const columns=[...standard,...keys.filter(k=>!standard.some(c=>c[0].toLocaleUpperCase('pt-BR')===k.toLocaleUpperCase('pt-BR'))).map(k=>[k,a=>a.data.row?.[k]??a.data.ed?.[k]??''])];
+ const statuses=[...new Set(['Pendente',...activeStatuses,'Migrada','Quebra','Abandonada',...acts.map(a=>a.data.status).filter(Boolean)])];
+ const analysts=[...new Set(acts.map(a=>a.data.analystName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
  const overlay=document.createElement('div');overlay.id='activityReportOverlay';overlay.className='report-overlay';
- overlay.innerHTML=`<div class="report-dialog" role="dialog" aria-modal="true" aria-labelledby="reportTitle"><div class="report-dialog-head"><h3 id="reportTitle">Extrair relatório</h3><button type="button" class="report-close" aria-label="Fechar">×</button></div><p class="small muted">Selecione as colunas desejadas. O arquivo incluirá as atividades do projeto conforme o período escolhido na tela.</p><div class="report-columns">${ACTIVITY_REPORT_COLUMNS.map(([id,label])=>`<label><input type="checkbox" value="${id}" checked> ${label}</label>`).join('')}</div><div class="report-dialog-actions"><button type="button" class="secondary" id="cancelActivityReport">Cancelar</button><button type="button" id="downloadActivityReport">Baixar CSV</button></div></div>`;
+ const group=(items,cls)=>`<div class="report-options ${cls}">${items.map((label,i)=>`<label><input type="checkbox" value="${i}" checked><span>${esc(label)}</span></label>`).join('')}</div>`;
+ overlay.innerHTML=`<div class="report-dialog report-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="reportTitle"><div class="report-dialog-head"><h3 id="reportTitle">Extrair relatório</h3><button type="button" class="report-close" aria-label="Fechar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><p class="small muted">Escolha os campos, os status e os analistas. O período acompanha a seleção da tela.</p><div class="report-group"><div class="report-group-title"><b>Campos do projeto</b><label><input type="checkbox" class="report-toggle" data-target="report-fields" checked> Selecionar todos</label></div>${group(columns.map(c=>c[0]),'report-fields')}</div><div class="report-group"><div class="report-group-title"><b>Status</b><label><input type="checkbox" class="report-toggle" data-target="report-statuses" checked> Selecionar todos</label></div>${group(statuses,'report-statuses')}</div><div class="report-group"><div class="report-group-title"><b>Analistas</b><label><input type="checkbox" class="report-toggle" data-target="report-analysts" checked> Selecionar todos</label></div>${group([...analysts,'Sem analista'],'report-analysts')}</div><div class="report-dialog-actions"><label class="report-format-label">Formato <select id="reportFormat"><option value="xlsx">XLSX</option><option value="xls">XLS</option><option value="xlsm">XLSM</option><option value="csv">CSV</option></select></label><button type="button" class="secondary" id="cancelActivityReport">Cancelar</button><button type="button" id="downloadActivityReport">Baixar relatório</button></div></div>`;
  document.body.appendChild(overlay);
  const close=()=>overlay.remove();overlay.querySelector('.report-close').onclick=close;overlay.querySelector('#cancelActivityReport').onclick=close;overlay.onclick=e=>{if(e.target===overlay)close()};
+ overlay.querySelectorAll('.report-toggle').forEach(t=>t.onchange=()=>overlay.querySelectorAll('.'+t.dataset.target+' input').forEach(x=>x.checked=t.checked));
+ overlay.querySelectorAll('.report-options').forEach(g=>g.addEventListener('change',()=>{let t=overlay.querySelector('.report-toggle[data-target="'+g.classList[1]+'"]');if(t)t.checked=[...g.querySelectorAll('input')].every(x=>x.checked)}));
  overlay.querySelector('#downloadActivityReport').onclick=()=>{
-  const selected=[...overlay.querySelectorAll('.report-columns input:checked')].map(i=>ACTIVITY_REPORT_COLUMNS.find(c=>c[0]===i.value)).filter(Boolean);
-  if(!selected.length){toast('Selecione pelo menos uma coluna.');return}
-  const acts=dateActivities(projectActivities());
-  const safe=v=>{let x=String(v??'');if(/^[\s]*[=+@\-]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"'};
-  const lines=[selected.map(c=>safe(c[1])).join(';'),...acts.map(a=>selected.map(c=>safe(c[2](a))).join(';'))];
-  const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='Relatorio_'+String(getName(project())).replace(/[^\w-]+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);close();toast('Relatório exportado.');
+  const indices=cls=>[...overlay.querySelectorAll('.'+cls+' input:checked')].map(x=>Number(x.value));
+  const ci=indices('report-fields'),si=indices('report-statuses'),ai=indices('report-analysts');
+  if(!ci.length||!si.length||!ai.length)return toast('Selecione ao menos um campo, status e analista.');
+  const chosen=ci.map(i=>columns[i]);const statusSet=new Set(si.map(i=>statuses[i]));const analystSet=new Set(ai.map(i=>[...analysts,'Sem analista'][i]));
+  const rows=dateActivities(acts).filter(a=>statusSet.has(a.data.status||'Pendente')&&analystSet.has(a.data.analystName||'Sem analista'));
+  const matrix=[chosen.map(c=>c[0]),...rows.map(a=>chosen.map(c=>String(c[1](a)??'')))];
+  const format=overlay.querySelector('#reportFormat').value;
+  const filename='Relatorio_'+String(getName(p)).replace(/[^a-zA-Z0-9_-]+/g,'_')+'_'+new Date().toISOString().slice(0,10);
+  let blob;
+  if(format==='csv'){
+   const safe=v=>{let x=String(v??'');if(/^[\s]*[=+@\-]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"'};
+   blob=new Blob(['\ufeff'+matrix.map(row=>row.map(safe).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+  }else{
+   if(!window.XLSX)return toast('Biblioteca de planilhas indisponível. Verifique a conexão ou selecione CSV.');
+   try{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(matrix),'Atividades');const bookType=format==='xls'?'biff8':format==='xlsm'?'xlsm':'xlsx';const bytes=XLSX.write(wb,{bookType,type:'array'});blob=new Blob([bytes],{type:'application/octet-stream'});}catch(err){return toast('Falha ao gerar planilha: '+err.message)}
+  }
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename+'.'+format;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);close();toast('Relatório exportado: '+rows.length+' atividades.');
  };
  overlay.querySelector('.report-close').focus();
 }

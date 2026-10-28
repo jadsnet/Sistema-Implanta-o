@@ -1203,3 +1203,25 @@ html[data-theme="light"] .new-activity-section{background:rgba(255,255,255,.075)
 .section-editor #addExtraSection,.field-editor #addExtraField{background:#7917c7!important;color:#fff!important;border:1px solid #a747f5!important;box-shadow:3px 5px 10px rgba(25,10,45,.3)!important}
 .section-editor #deleteSelectedSection{background:#c12a51;border:1px solid #e14970;box-shadow:3px 5px 10px rgba(90,13,45,.3)}
 .section-editor .section-editor-action:hover{filter:brightness(1.15);transform:translateY(-1px)}
+
+/* Refinamentos dos controles e relatório */
+.section-editor #extraSectionName{flex:0 1 72%;max-width:72%}
+.section-editor #addExtraSection,.field-editor #addExtraField{border:0!important;outline:0!important;box-shadow:3px 5px 10px rgba(25,10,45,.3)!important}
+.section-editor #deleteSelectedSection,.field-editor #deleteSelectedField{background:#c52c50!important;border:0!important;color:#fff!important}
+.report-dialog-wide{width:min(980px,96vw)!important;max-height:92vh;overflow-y:auto}
+.report-dialog-wide .report-dialog-head{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.report-dialog-wide .report-close{display:flex!important;align-items:center!important;justify-content:center!important;padding:0!important;flex:none;line-height:1!important}
+.report-dialog-wide .report-close svg{display:block;flex:none}
+.report-group{margin:16px 0 20px}
+.report-group-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.report-group-title label{font-size:12px;display:flex;align-items:center;gap:7px}
+.report-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.report-options label{display:flex;align-items:center;gap:9px;padding:8px 10px;min-height:36px;border-radius:9px;background:#402753;color:#fff;font-size:12px;cursor:pointer}
+.report-options label span{overflow-wrap:anywhere}
+.report-options input{accent-color:#8d21d7;flex:none}
+.report-dialog-wide .report-dialog-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.report-format-label{display:flex;align-items:center;gap:9px;margin-right:auto;font-size:13px}
+.report-format-label select{min-width:105px}
+html[data-theme="light"] .report-options label{background:#785b91;color:#fff}
+@media(max-width:700px){.report-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:440px){.report-options{grid-template-columns:1fr}}
