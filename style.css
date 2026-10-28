@@ -1151,3 +1151,24 @@ html[data-theme="light"] .new-activity-section{background:rgba(255,255,255,.075)
 .config-builder-col .extra-fields-list{margin-top:15px}
 @media(max-width:900px){.config-builder{grid-template-columns:1fr!important}.config-builder-col+.config-builder-col{border-left:0;border-top:1px solid rgba(236,217,250,.25);padding:22px 0 0}.new-activity-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:560px){.new-activity-grid{grid-template-columns:1fr!important}}
+
+/* Cadastro de atividade: espelhar proporções e superfícies da atividade padrão */
+.new-activity-overlay .new-activity-dialog{background:var(--panel2)!important;max-height:94vh!important;padding:20px 18px!important}
+.new-activity-overlay .new-activity-head{top:-20px!important;padding:8px 0 18px!important;background:var(--panel2)!important}
+.new-activity-overlay .new-activity-section{background:var(--panel2)!important;padding:24px 16px 17px!important;margin:18px 0 26px!important;border-radius:16px!important;box-shadow:0 9px 20px rgba(40,17,59,.16)!important}
+.new-activity-overlay .new-activity-section-title{background:#60328b!important;color:white!important;border-radius:12px!important;padding:12px 16px!important;margin:-40px 0 16px!important;box-shadow:3px 6px 12px #0002!important}
+.new-activity-overlay .new-activity-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:13px 12px!important}
+.new-activity-overlay .new-activity-grid .field span{color:#eee0f7!important;font-size:10px!important;font-weight:600!important}
+.new-activity-overlay .new-activity-grid input{background:#74518c!important;color:#fff!important;border-radius:8px!important;height:39px!important}
+.new-activity-close{width:36px;height:34px;display:grid;place-items:center;background:#7917c7!important;color:white!important;font-size:23px;font-weight:700;line-height:1;border-radius:10px;box-shadow:3px 5px 10px #0003;flex-shrink:0}
+@media(max-width:900px){.new-activity-overlay .new-activity-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:560px){.new-activity-overlay .new-activity-grid{grid-template-columns:1fr!important}}
+
+/* Cadastro de atividade: cabeçalho limpo e seções com legenda sobreposta */
+.new-activity-overlay .new-activity-dialog{position:relative!important;box-sizing:border-box!important;border-radius:18px!important;padding:20px 18px 24px!important;scroll-padding-top:85px!important}
+.new-activity-overlay .new-activity-head{position:sticky!important;top:-20px!important;z-index:15!important;display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:72px!important;box-sizing:border-box!important;margin:0 0 25px!important;padding:12px 16px!important;background:var(--panel2)!important;border-radius:14px!important;box-shadow:0 5px 12px rgba(30,12,49,.12)!important}
+.new-activity-overlay .new-activity-head h2{margin:0!important;padding:0!important;line-height:1.25!important;font-size:20px!important;font-weight:750!important}
+.new-activity-overlay .new-activity-close{appearance:none!important;display:flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important;width:38px!important;height:38px!important;min-width:38px!important;padding:0!important;margin:0!important;border:0!important;border-radius:10px!important;background:#7917c7!important;color:#fff!important;line-height:0!important;cursor:pointer!important;box-shadow:3px 5px 10px rgba(25,10,45,.25)!important}
+.new-activity-overlay .new-activity-close svg{display:block!important;flex:none!important;transform:none!important}
+.new-activity-overlay .new-activity-section{position:relative!important;overflow:visible!important;margin:28px 0 30px!important;padding:38px 16px 18px!important;border-radius:16px!important;background:var(--panel2)!important;box-shadow:0 9px 20px rgba(40,17,59,.16)!important}
+.new-activity-overlay .new-activity-section-title{position:absolute!important;top:-17px!important;left:0!important;display:inline-flex!important;align-items:center!important;min-height:40px!important;box-sizing:border-box!important;margin:0!important;padding:10px 16px!important;border-radius:12px!important;background:#60328b!important;color:#fff!important;line-height:1.2!important;box-shadow:3px 6px 12px rgba(30,10,50,.22)!important}
