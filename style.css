@@ -1193,3 +1193,13 @@ html[data-theme="light"] .new-activity-section{background:rgba(255,255,255,.075)
 .field-editor #deleteSelectedField svg{stroke:#fff}
 .field-editor #deleteSelectedField:hover{filter:brightness(1.14);transform:translateY(-1px)}
 .field-editor .field-editor-action{flex-shrink:0}
+
+/* Cadastro de seções: mesma interação dos campos, sem lista inferior */
+.config-builder-col .filters.section-editor{display:flex;align-items:center;gap:12px;flex-wrap:nowrap}
+.section-editor #extraSectionName{flex:1;min-width:0;width:auto;max-width:none}
+.section-editor .section-editor-action{display:inline-flex;align-items:center;justify-content:center;flex:0 0 42px;width:42px;height:38px;min-width:42px;padding:0;border-radius:9px;color:#fff;cursor:pointer;transition:filter .15s,transform .15s}
+.section-editor .section-editor-action[hidden]{display:none!important}
+.section-editor .section-editor-action svg{display:block;flex:none}
+.section-editor #addExtraSection,.field-editor #addExtraField{background:#7917c7!important;color:#fff!important;border:1px solid #a747f5!important;box-shadow:3px 5px 10px rgba(25,10,45,.3)!important}
+.section-editor #deleteSelectedSection{background:#c12a51;border:1px solid #e14970;box-shadow:3px 5px 10px rgba(90,13,45,.3)}
+.section-editor .section-editor-action:hover{filter:brightness(1.15);transform:translateY(-1px)}
