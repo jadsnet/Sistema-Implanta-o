@@ -1133,3 +1133,21 @@ html[data-theme="light"] .history-dialog{background:#86699e!important;color:#fff
 html[data-theme="light"] .new-activity-section{background:rgba(255,255,255,.075)}
 @media(max-width:900px){.new-activity-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.new-activity-grid{grid-template-columns:1fr}}
+
+/* Cadastro manual: mesmas proporções, campos e seções da atividade padrão */
+.new-activity-dialog{width:min(1520px,96vw)!important;background:var(--card-bg,#886ca0)!important;border-radius:18px!important;padding:24px 20px!important}
+.new-activity-section{background:var(--card-bg,#886ca0)!important;border-radius:17px!important;padding:24px 16px 17px!important;margin:29px 0 18px!important;box-shadow:5px 9px 18px rgba(36,15,55,.19)!important}
+.new-activity-section-title{background:#60328b!important;color:#fff!important;border-radius:12px!important;margin:-39px 0 16px!important;padding:12px 16px!important;font-size:14px!important}
+.new-activity-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px 12px!important}
+.new-activity-grid .field span{font-size:10px!important;letter-spacing:.025em!important;color:#eee0f7!important}
+.new-activity-grid input{height:39px!important;min-height:39px!important;border:0!important;border-radius:8px!important;background:#74518c!important;color:#fff!important;padding:9px 10px!important;font-size:12px!important}
+.new-activity-grid input:focus{outline:2px solid #b38be3!important;outline-offset:0}
+.config-builder{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:0!important;align-items:stretch!important}
+.config-builder-col{min-width:0;padding:4px 22px 10px 0}
+.config-builder-col+.config-builder-col{border-left:1px solid rgba(236,217,250,.25);padding-left:24px;padding-right:0}
+.config-builder-col .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.config-builder-col .filters input{min-width:130px;flex:1 1 145px;max-width:260px}
+.config-builder-col .filters select{min-width:130px;flex:1 1 145px;max-width:220px}
+.config-builder-col .extra-fields-list{margin-top:15px}
+@media(max-width:900px){.config-builder{grid-template-columns:1fr!important}.config-builder-col+.config-builder-col{border-left:0;border-top:1px solid rgba(236,217,250,.25);padding:22px 0 0}.new-activity-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:560px){.new-activity-grid{grid-template-columns:1fr!important}}
