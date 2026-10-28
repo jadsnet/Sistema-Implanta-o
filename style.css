@@ -1184,3 +1184,12 @@ html[data-theme="light"] .new-activity-section{background:rgba(255,255,255,.075)
 .field-editor #deleteSelectedField{margin-left:7px}
 .field-editor select:disabled{opacity:.85;cursor:not-allowed}
 @media(max-width:600px){.config-builder-col .filters.field-editor{flex-wrap:wrap}.field-editor .field-name-picker{flex-basis:100%}}
+
+/* Editor compacto: ações alinhadas sem lista duplicada de campos */
+.config-builder-col .filters.field-editor{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
+.field-editor #addExtraField{background:#8322d6;color:#fff;border:1px solid #a747f5;box-shadow:0 3px 9px rgba(81,12,137,.32);transition:filter .15s,transform .15s}
+.field-editor #addExtraField:hover{filter:brightness(1.17);transform:translateY(-1px)}
+.field-editor #deleteSelectedField{background:#bb2750;color:#fff;border:1px solid #e14970;margin-left:10px;box-shadow:0 3px 9px rgba(115,13,45,.3);transition:filter .15s,transform .15s}
+.field-editor #deleteSelectedField svg{stroke:#fff}
+.field-editor #deleteSelectedField:hover{filter:brightness(1.14);transform:translateY(-1px)}
+.field-editor .field-editor-action{flex-shrink:0}
