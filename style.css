@@ -1105,3 +1105,6 @@ html:not([data-theme="light"]) .stats > .stat:hover,
 html[data-theme="light"] .stats > .stat:hover {
   box-shadow: 9px 15px 22px -3px rgba(17, 6, 29, .49), 4px 7px 12px rgba(17, 6, 29, .24) !important;
 }
+
+/* Links reais para permitir abrir menus em nova guia com clique direito ou botão do meio. */
+.sidebar a.nav{text-decoration:none;cursor:pointer}
