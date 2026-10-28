@@ -1225,3 +1225,7 @@ html[data-theme="light"] .new-activity-section{background:rgba(255,255,255,.075)
 html[data-theme="light"] .report-options label{background:#785b91;color:#fff}
 @media(max-width:700px){.report-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:440px){.report-options{grid-template-columns:1fr}}
+
+/* Seções estruturais protegidas fora da configuração inicial */
+.section-editor #deleteSelectedSection:disabled{opacity:.38!important;cursor:not-allowed!important;filter:grayscale(.6)!important;box-shadow:none!important;transform:none!important;pointer-events:auto!important}
+.section-editor #deleteSelectedSection:disabled:hover{filter:grayscale(.6)!important;transform:none!important}
