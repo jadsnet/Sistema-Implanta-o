@@ -41,3 +41,27 @@ Para melhor funcionamento do armazenamento local, abra o sistema num endereço `
 - **Total geral**: mostra atividades de todos os status e todas as datas, com cartões contando o total por status. A lista fica em ordem decrescente da última movimentação e oferece **Mostrar mais atividades**.
 - **Painel do administrador → Configurar projeto → Editar atividade**: abre uma janela de busca em todas as atividades do projeto, com status, analista, tempo e data de conclusão, sem botões de adoção. É possível abrir o formulário da atividade, editar campos e status, e excluir após confirmação digitando o ID VGR. Runbooks vinculados são removidos junto com a atividade. A exclusão é registrada no Log.
 - Os dados continuam locais no navegador. Faça cópia/exportação dos dados antes de excluir atividades; a exclusão não pode ser desfeita.
+
+## Editor visual do Runbook (nova funcionalidade)
+
+Em Painel do administrador > Configurar projeto > Modelo de planilha de runbook,
+importe/aplique um modelo e clique em **Editar runbook**. O editor abre sobre a
+página e permite:
+- Clicar no título de uma seção ou evidência para renomear.
+- Alterar a descrição/instrução (apresentada em itálico no Runbook).
+- Criar novas seções, escolhendo Evidências/testes ou Fotografias.
+- Adicionar e excluir quadros de imagens por seção e excluir seções inteiras
+  mediante confirmação.
+- Salvar ou descartar alterações. As alterações são por projeto e ficam no
+  armazenamento local do navegador.
+
+O arquivo de planilha original é mantido no IndexedDB; as alterações são
+aplicadas a uma cópia na exportação Excel. Quadros novos usam linhas adicionais
+e seções novas geram novas abas. Seções removidas deixam de aparecer na tela e
+suas abas são removidas da cópia exportada quando a remoção não deixaria a
+planilha sem abas. Como fórmulas e referências de modelos externos podem usar
+essas abas, confira o Excel gerado antes de distribuí-lo.
+
+No tema claro, os quadros internos de evidência têm um contraste levemente
+maior. O botão Limpar da Filtragem customizada está elevado alguns pixels para
+ficar centralizado no cartão, sem alterar seu tamanho.

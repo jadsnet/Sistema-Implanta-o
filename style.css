@@ -1402,3 +1402,99 @@ html[data-theme="light"] .report-date-filter{background:rgba(234,215,247,.13)}
 @media(max-width:850px){
  .activity-line .elapsed{white-space:normal;line-height:1.25}
 }
+
+/* Runbook: contraste sutil dos cartões de evidência no tema claro. */
+html[data-theme="light"] .runbook-detail .evidence-section .evidence-card{
+  background:#806296!important;
+  border:1px solid rgba(248,232,255,.18)!important;
+  box-shadow:3px 7px 15px rgba(57,26,78,.15)!important;
+}
+html[data-theme="light"] .runbook-detail .evidence-section .evidence-card .evidence-drop{
+  background:#6c5084!important;
+}
+/* Centralização vertical do Limpar sem alterar o cartão externo. */
+.stats>.custom-filter-card .custom-filter-fields #clearCustomFilter{
+  position:relative!important;top:-3px!important;
+}
+/* Gatilho de edição do Runbook nas configurações. */
+.runbook-edit-trigger{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  margin-left:auto;min-height:40px;padding:9px 15px;border:0;border-radius:10px;
+  background:#791bd4;color:white;font-size:13px;font-weight:700;
+  box-shadow:4px 7px 14px rgba(17,5,32,.27);cursor:pointer}
+.runbook-edit-trigger:disabled{cursor:not-allowed;opacity:.48;box-shadow:none}
+.runbook-edit-trigger:not(:disabled):hover{background:#901eed;transform:translateY(-1px)}
+/* Editor sobreposto: mesmas cores e títulos flutuantes dos quadros do Runbook. */
+.runbook-editor-overlay{position:fixed;inset:0;z-index:12000;background:rgba(13,5,22,.72);
+  display:flex;align-items:center;justify-content:center;padding:16px}
+.runbook-editor-window{width:min(1390px,100%);max-height:min(94vh,1100px);display:flex;flex-direction:column;
+  border-radius:19px;background:#291939;color:#f8efff;
+  border:1px solid #624779;box-shadow:0 25px 90px rgba(0,0,0,.46);overflow:hidden}
+.runbook-editor-header{padding:20px 23px;background:#302040;display:flex;align-items:center;
+  justify-content:space-between;gap:18px;border-bottom:1px solid #634778;flex:0 0 auto}
+.runbook-editor-header h2{font-size:21px;line-height:1.3;margin:0 0 6px;color:#fff}
+.runbook-editor-header p{margin:0;font-size:12px;color:#dbc9e9}
+.runbook-editor-close{flex:0 0 39px!important;width:39px!important;height:39px!important;padding:0!important;
+  display:flex;align-items:center;justify-content:center;border-radius:11px;background:#801bd4!important;
+  color:white!important;box-shadow:3px 5px 11px #08011055;cursor:pointer}
+.runbook-editor-close svg{display:block}
+.runbook-editor-body{overflow:auto;padding:26px 24px 20px;min-height:0;flex:1}
+.runbook-editor-toolbar{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;
+  padding:14px 16px;background:#382649;border-radius:12px;margin-bottom:14px}
+.runbook-editor-toolbar label{font-size:11px;display:flex;flex-direction:column;gap:5px;min-width:200px;flex:1}
+.runbook-editor-toolbar input,.runbook-editor-toolbar select{min-height:37px!important;color:#fff!important;
+  background:#513865!important;border:1px solid #77578b!important;border-radius:8px;padding:7px 11px}
+.runbook-editor-toolbar button{min-height:38px;white-space:nowrap;background:#811bd0;border:0;border-radius:9px;
+  color:#fff;font-weight:700;box-shadow:3px 5px 10px #13071d4d}
+.runbook-editor-help{font-size:12px;color:#d9c6e7;margin:0 0 23px}
+.runbook-editor-section{position:relative;padding:34px 15px 17px;background:#39274b;
+  margin:27px 0 34px;border-radius:13px;box-shadow:4px 8px 19px #0e061e50}
+.runbook-editor-section-top{position:absolute;top:-17px;left:0;right:10px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px}
+.runbook-editor-section-name{max-width:min(75%,550px);min-width:120px;flex:0 1 auto}
+.runbook-editor-section-name input{border:1px solid transparent!important;outline:0!important;
+  background:#61318b!important;box-shadow:2px 5px 12px #16082155!important;color:#fff!important;
+  border-radius:10px!important;padding:9px 14px!important;font-size:14px!important;
+  font-weight:800!important;min-height:37px!important;width:100%!important;cursor:text}
+.runbook-editor-section-name input:focus{border-color:#d5aeff!important;box-shadow:0 0 0 2px #ac73dc55!important}
+.runbook-editor-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.runbook-editor-item{min-width:0;background:#493059;border:1px solid #735183;
+  padding:13px;border-radius:12px;display:flex;flex-direction:column;gap:7px;
+  box-shadow:2px 4px 12px #18091d33}
+.runbook-editor-item-title{display:flex;gap:9px;align-items:center}
+.runbook-editor-item-title input{width:100%;min-width:0;flex:1;color:#fff!important;
+  font-weight:700;background:transparent!important;border:1px solid transparent!important;
+  border-radius:7px!important;min-height:35px!important;padding:7px!important;cursor:text}
+.runbook-editor-item-title input:focus,.runbook-editor-caption textarea:focus{border-color:#b58aea!important;background:#553e69!important}
+.runbook-editor-caption{font-size:10px;color:#e1ceeb;display:flex;flex-direction:column;gap:4px}
+.runbook-editor-caption textarea{font-size:12px!important;font-style:italic;line-height:1.45;
+  background:#3d294d!important;color:#f5e6fc!important;border:1px solid transparent!important;
+  border-radius:8px;min-height:56px!important;max-height:150px;resize:vertical;padding:9px!important}
+.runbook-editor-image-sample{min-height:95px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;background:#3f2b51;border-radius:8px;color:#ab8cbb;gap:4px}
+.runbook-editor-image-sample span{font-size:28px;line-height:1}
+.runbook-editor-image-sample small{font-size:10px}
+.runbook-editor-trash{background:#c12f5d!important;display:flex;align-items:center;justify-content:center;
+  width:36px;min-width:36px;height:36px;min-height:36px;padding:0!important;
+  color:#fff!important;border:0!important;border-radius:9px!important;
+  box-shadow:3px 5px 10px #2b092055;cursor:pointer}
+.runbook-editor-trash:hover{background:#e13461!important}
+.runbook-editor-add-item{margin-top:13px;background:#6c318f!important;color:#fff!important;
+  font-size:12px;font-weight:700;border-radius:9px}
+.runbook-editor-footer{padding:15px 23px;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;background:#302040;border-top:1px solid #624779;flex:0 0 auto}
+.runbook-editor-footer>div{display:flex;gap:9px}
+.runbook-editor-footer button{border-radius:9px}
+.runbook-editor-footer #rbEditorSave{background:#8619d7;color:#fff;font-weight:700}
+.runbook-editor-empty{color:#e7cfed;font-size:13px}
+.sr-only{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+html[data-theme="light"] .runbook-editor-window{background:#c6a9d3;color:#31203e;border-color:#9f7bb4}
+html[data-theme="light"] .runbook-editor-header,html[data-theme="light"] .runbook-editor-footer{background:#a98ac0;border-color:#8b69a2}
+html[data-theme="light"] .runbook-editor-header h2{color:#342244}
+html[data-theme="light"] .runbook-editor-header p,html[data-theme="light"] .runbook-editor-help{color:#483357}
+html[data-theme="light"] .runbook-editor-toolbar{background:#b99bcb}
+html[data-theme="light"] .runbook-editor-section{background:#9678ae}
+html[data-theme="light"] .runbook-editor-item{background:#84669f}
+html[data-theme="light"] .runbook-editor-image-sample{background:#74558c;color:#d3b8e4}
+html[data-theme="light"] .runbook-editor-caption{color:#f1e6f8}
+@media(max-width:800px){.runbook-editor-items{grid-template-columns:1fr}.runbook-edit-trigger{margin-left:0}.runbook-editor-toolbar label{min-width:140px}}
+@media(max-width:540px){.runbook-editor-overlay{padding:5px}.runbook-editor-header,.runbook-editor-footer{padding:14px}.runbook-editor-body{padding:23px 10px 12px}.runbook-editor-section-name{max-width:78%}.runbook-editor-footer{flex-wrap:wrap}}

@@ -35,14 +35,15 @@ async function exportRunbookImported(activity, images, projectData){
  if(!data&&projectData.runbookWorkbookBase64)data=Uint8Array.from(atob(projectData.runbookWorkbookBase64),c=>c.charCodeAt(0));
  if(!data)throw Error('O arquivo do Runbook não foi encontrado neste navegador. Importe novamente o modelo nas configurações do projeto.');
  const zip=await JSZip.loadAsync(data);
- const model=projectData.runbookModel,book=parse(await zip.file('xl/workbook.xml').async('string'));
+ const model=JSON.parse(JSON.stringify(projectData.runbookModel)),book=parse(await zip.file('xl/workbook.xml').async('string'));
  const wbRels=parse(await zip.file('xl/_rels/workbook.xml.rels').async('string'));
  const relMap=new Map([...wbRels.getElementsByTagNameNS(packageRelNs,'Relationship')].map(x=>[x.getAttribute('Id'),toName(x.getAttribute('Target'))]));
  const sheetMap=new Map([...book.getElementsByTagNameNS(mainNs,'sheet')].map(x=>[x.getAttribute('name'),relMap.get(x.getAttributeNS(docRelNs,'id')||x.getAttribute('r:id'))]));
+ const contentPath='[Content_Types].xml';let contents=parse(await zip.file(contentPath).async('string'));
+ if(window.RunbookWorkbookEdit)await RunbookWorkbookEdit.prepare({zip,model,workbookDoc:book,wbRelsDoc:wbRels,contentsDoc:contents,sheetMap,parse,serialize});
  const tasks=[];let index=0;
  for(const section of model.sections)for(const item of section.items){if(images[index])tasks.push({item,section,index,source:images[index]});index++}
  const grouped=new Map();for(const task of tasks){const path=sheetMap.get(task.item.sheetName);if(!path)continue;if(!grouped.has(path))grouped.set(path,[]);grouped.get(path).push(task)}
- const contentPath='[Content_Types].xml';let contents=parse(await zip.file(contentPath).async('string'));
  const ctNS='http://schemas.openxmlformats.org/package/2006/content-types';
  if(![...contents.getElementsByTagNameNS(ctNS,'Default')].some(x=>x.getAttribute('Extension')==='png')){let d=contents.createElementNS(ctNS,'Default');d.setAttribute('Extension','png');d.setAttribute('ContentType','image/png');contents.documentElement.appendChild(d)}
  let nextDrawing=1;while(zip.file(`xl/drawings/drawing${nextDrawing}.xml`))nextDrawing++;
@@ -67,6 +68,7 @@ async function exportRunbookImported(activity, images, projectData){
    }
    zip.file(drawingPath,serialize(drawing));zip.file(drawRelsPath,serialize(drRels));
  }
+ zip.file('xl/workbook.xml',serialize(book));zip.file('xl/_rels/workbook.xml.rels',serialize(wbRels));
  zip.file(contentPath,serialize(contents));
  const original=projectData.runbookFilename||'Runbook.xlsx';const ext=/\.xlsm$/i.test(original)?'xlsm':'xlsx';
  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:5}});

@@ -63,7 +63,7 @@
         imageHeight:(()=>{const from=Math.max(item.row+1,(item.descriptionRow||0)+1),to=next?.row||from+1;let height=0;for(let r=from;r<to;r++){const row=sheet['!rows']?.[r-1];height+=row?.hpx||((row?.hpt||0)*4/3)||0;}return height?Math.round(height):kind==='photos'?320:475})()};
     });
     if(!items.length)return null;
-    return {id:`sheet:${name}`,title:skipTop?heading:name,kind,items};
+    return {id:`sheet:${name}`,title:skipTop?heading:name,kind,items,headingRow:skipTop?rows[0].index:null,headingCol:skipTop?rows[0].cells[0]?.col:null};
   }
   function buildModel(workbook){
     let sections=[];
