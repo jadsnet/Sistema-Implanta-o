@@ -28,8 +28,12 @@ function pictureMarkup(pic,imageRid,section,item){
  return `<xdr:oneCellAnchor><xdr:from><xdr:col>${leftCol}</xdr:col><xdr:colOff>${8*EMU}</xdr:colOff><xdr:row>${row}</xdr:row><xdr:rowOff>${5*EMU}</xdr:rowOff></xdr:from><xdr:ext cx="${w}" cy="${h}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${pic.id}" name="${label}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="${imageRid}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
 }
 async function exportRunbookImported(activity, images, projectData){
- if(!window.JSZip||!projectData?.runbookWorkbookBase64||!projectData?.runbookModel?.sections?.length)throw Error('Modelo de Runbook não disponível para este projeto.');
- const data=Uint8Array.from(atob(projectData.runbookWorkbookBase64),c=>c.charCodeAt(0));
+ if(!window.JSZip||!projectData?.runbookModel?.sections?.length)throw Error('Modelo de Runbook não disponível para este projeto.');
+ let data=null;
+ if(projectData.runbookStorageKey) data=await window.RunbookStorage.get(projectData.runbookStorageKey);
+ // Compatibilidade com runbooks importados em versões anteriores.
+ if(!data&&projectData.runbookWorkbookBase64)data=Uint8Array.from(atob(projectData.runbookWorkbookBase64),c=>c.charCodeAt(0));
+ if(!data)throw Error('O arquivo do Runbook não foi encontrado neste navegador. Importe novamente o modelo nas configurações do projeto.');
  const zip=await JSZip.loadAsync(data);
  const model=projectData.runbookModel,book=parse(await zip.file('xl/workbook.xml').async('string'));
  const wbRels=parse(await zip.file('xl/_rels/workbook.xml.rels').async('string'));

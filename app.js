@@ -204,7 +204,7 @@ function renderRunbook(){let acts=projectActivities();$('#appContent').innerHTML
  function setImage(i,file){if(!file||!file.type.startsWith('image/'))return;let reader=new FileReader();reader.onload=()=>{images[i]=reader.result;let drop=document.querySelector(`[data-evidence="${i}"]`);if(drop){let old=drop.querySelector('img');if(!old){old=document.createElement('img');drop.querySelector('.evidence-placeholder')?.remove();drop.prepend(old)}old.src=images[i];old.alt=items[i][0];if(!drop.querySelector('.evidence-remove'))old.insertAdjacentHTML('afterend','<button type="button" class="evidence-remove" title="Remover imagem" aria-label="Remover imagem">×</button>');drop.querySelector('.evidence-remove').onclick=e=>{e.stopPropagation();images[i]='';old.remove();drop.querySelector('.evidence-remove')?.remove();drop.insertAdjacentHTML('afterbegin','<span class="evidence-placeholder">▧</span>');drop.querySelector('.evidence-hint strong').textContent='+ Adicionar print'};drop.querySelector('.evidence-hint strong').textContent='+ Trocar print'} };reader.readAsDataURL(file)}
  if(!readOnly)document.querySelectorAll('[data-evidence]').forEach(drop=>{let i=Number(drop.dataset.evidence),input=drop.querySelector('input');drop.addEventListener('click',e=>{if(e.target.closest('.evidence-remove'))return;drop.focus()});drop.addEventListener('dblclick',e=>{if(e.target.closest('.evidence-remove'))return;input.click()});drop.querySelector('.evidence-remove')?.addEventListener('click',e=>{e.stopPropagation();images[i]='';drop.querySelector('img')?.remove();drop.querySelector('.evidence-remove')?.remove();if(!drop.querySelector('.evidence-placeholder'))drop.insertAdjacentHTML('afterbegin','<span class="evidence-placeholder">▧</span>');drop.querySelector('.evidence-hint strong').textContent='+ Adicionar print';});drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}});input.onchange=()=>setImage(i,input.files[0]);drop.ondragover=e=>{e.preventDefault();drop.classList.add('dragover')};drop.ondragleave=()=>drop.classList.remove('dragover');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('dragover');setImage(i,e.dataTransfer.files[0])}});
  if(!readOnly)document.onpaste=e=>{let item=[...(e.clipboardData?.items||[])].find(x=>x.type.startsWith('image/'));if(item){let active=document.activeElement?.closest?.('[data-evidence]');setImage(active?Number(active.dataset.evidence):0,item.getAsFile())}};
- if(!readOnly)$('#generateRunbook').onclick=async()=>{try{let run=arr('runbooks').find(x=>x.data.activityId===id);if(!run){run={id:'rb_'+Date.now(),data:{activityId:id,slots:[],by:currentUser(),startedAt:new Date().toISOString()}};DB.runbooks.push(run)}run.data.images=images;run.data.slotKeys=slotKeys;run.data.updatedAt=new Date().toISOString();save();if(configuredRunbook && project()?.data.runbookWorkbookBase64)await exportRunbookImported(a,images,project().data);else await exportCopasaRunbook(a,images);toast('Runbook Excel gerado com sucesso')}catch(err){console.error(err);toast('Falha ao gerar Excel: '+err.message)}};
+ if(!readOnly)$('#generateRunbook').onclick=async()=>{try{let run=arr('runbooks').find(x=>x.data.activityId===id);if(!run){run={id:'rb_'+Date.now(),data:{activityId:id,slots:[],by:currentUser(),startedAt:new Date().toISOString()}};DB.runbooks.push(run)}run.data.images=images;run.data.slotKeys=slotKeys;run.data.updatedAt=new Date().toISOString();save();if(configuredRunbook && (project()?.data.runbookStorageKey||project()?.data.runbookWorkbookBase64))await exportRunbookImported(a,images,project().data);else await exportCopasaRunbook(a,images);toast('Runbook Excel gerado com sucesso')}catch(err){console.error(err);toast('Falha ao gerar Excel: '+err.message)}};
  if(!readOnly)$('#saveRunbook').onclick=()=>{let run=arr('runbooks').find(x=>x.data.activityId===id);if(!run){run={id:'rb_'+Date.now(),data:{activityId:id,slots:[],by:currentUser(),startedAt:new Date().toISOString()}};DB.runbooks.push(run)}run.data.images=images;run.data.slotKeys=slotKeys;run.data.evidence=images[0]||'';run.data.updatedAt=new Date().toISOString();log('Runbook salvo',activityName(a),id);save();toast('Runbook salvo')};
 }
 // Catálogo único dos campos exibidos no projeto, inclusive campos padrão sem valores.
@@ -249,8 +249,8 @@ if(adminTab==='Configurar projeto'){
  let p=project();if(!p){b.innerHTML='<div class="panel">Selecione um projeto na tela anterior.</div>';return}p.data=p.data||{};let template=p.data.activityTemplate||[];
  b.innerHTML=`<div class="panel admin-config"><div class="detailhead admin-config-head"><div><h3>Configurações do projeto: ${esc(getName(p))}</h3><p class="muted">Importe a planilha de atividades e o modelo de runbook. O sistema identifica os cabeçalhos/colunas e só exibe os campos presentes no modelo deste projeto.</p></div><div class="project-admin-actions"><button class="secondary" id="openProject">Abrir projeto</button><button class="danger-project" id="deleteProject">Remover projeto</button></div></div>
  <section class="admin-config-section"><h3>Foto de perfil do projeto</h3><p class="muted">Selecione uma imagem para aparecer no menu lateral quando este projeto estiver ativo.</p><div class="profile-config"><div class="profile-config-preview" id="profilePreview">${p.data.profilePhoto?`<img src="${esc(p.data.profilePhoto)}" alt="Foto atual do projeto">`:esc(getName(p).slice(0,1).toUpperCase())}</div><div class="profile-config-actions"><div class="profile-config-buttons"><label class="filelabel">Escolher foto<input type="file" id="projectProfilePhoto" accept="image/png,image/jpeg,image/webp,image/gif"></label><button class="secondary" id="removeProjectPhoto" ${p.data.profilePhoto?'':'disabled'}>Remover foto</button></div><p class="small muted">PNG, JPG, WEBP ou GIF · até 1 MB</p></div></div><div class="project-rename"><label for="projectNameEdit">Nome do projeto</label><div class="project-rename-controls"><input id="projectNameEdit" maxlength="100" value="${esc(getName(p))}" placeholder="Nome do projeto"><button type="button" id="saveProjectName">Salvar nome</button></div></div><div id="cropEditor" class="crop-editor hidden"><p class="muted">Arraste a foto para enquadrar e use o controle para aproximar ou afastar.</p><canvas id="cropCanvas" width="280" height="280" aria-label="Prévia do recorte"></canvas><div class="crop-actions"><label>Zoom <input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1"></label><button id="cropSave" type="button">Salvar enquadramento</button><button class="secondary" id="cropCancel" type="button">Cancelar</button></div></div></section>
- <section class="admin-config-section"><h3>Modelo de planilha do projeto</h3><p class="muted">Aceita CSV, XLS, XLSX, XLSM, ODS, TSV e DOCX. Após selecionar, confira os campos e clique em OK para aplicar.</p><label class="filelabel">Importar planilha do projeto<input type="file" id="projectCsv" accept=".csv,.txt,.tsv,.xls,.xlsx,.xlsm,.ods,.docx,.doc"></label><div id="projectPreview" class="import-preview"></div><div class="small muted" id="currentFields">Campos atuais: ${template.length?template.map(esc).join(' · '):'ainda não definido'}</div>
- </section><section class="admin-config-section"><h3>Modelo de planilha de runbook</h3><p class="muted">O sistema identifica títulos, instruções, evidências e fotos nas abas da planilha, preservando a estrutura para exportação. Prévia antes de aplicar.</p><label class="filelabel">Importar planilha do runbook<input type="file" id="projectRunbook" accept=".csv,.txt,.tsv,.xls,.xlsx,.xlsm,.ods"></label><div id="runbookPreview" class="import-preview">${p.data.runbookModel?`<p class="small muted">Modelo atual: ${esc(p.data.runbookFilename||'Planilha de Runbook')} · ${p.data.runbookModel.sections.length} seções · ${p.data.runbookModel.total} imagens</p>`:''}</div>
+ <section class="admin-config-section"><h3>Modelo de planilha do projeto</h3><p class="muted">Aceita CSV, XLS, XLSX, XLSM, ODS, TSV e DOCX. Após selecionar, confira os campos e clique em OK para aplicar.</p><div class="import-controls"><label class="filelabel">Importar planilha do projeto<input type="file" id="projectCsv" accept=".csv,.txt,.tsv,.xls,.xlsx,.xlsm,.ods,.docx,.doc"></label><button type="button" class="import-clear-button" id="clearProjectImport" title="Limpar arquivo selecionado" aria-label="Limpar planilha do projeto" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div id="projectPreview" class="import-preview"></div><div class="small muted" id="currentFields">Campos atuais: ${template.length?template.map(esc).join(' · '):'ainda não definido'}</div>
+ </section><section class="admin-config-section"><h3>Modelo de planilha de runbook</h3><p class="muted">O sistema identifica títulos, instruções, evidências e fotos nas abas da planilha, preservando a estrutura para exportação. Prévia antes de aplicar.</p><div class="import-controls"><label class="filelabel">Importar planilha do runbook<input type="file" id="projectRunbook" accept=".csv,.txt,.tsv,.xls,.xlsx,.xlsm,.ods"></label><button type="button" class="import-clear-button" id="clearRunbookImport" title="Remover arquivo selecionado ou modelo aplicado" aria-label="Limpar planilha do Runbook" ${p.data.runbookModel?'':'hidden'}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div id="runbookPreview" class="import-preview">${p.data.runbookModel?`<p class="small muted">Modelo atual: ${esc(p.data.runbookFilename||'Planilha de Runbook')} · ${p.data.runbookModel.sections.length} seções · ${p.data.runbookModel.total} imagens</p>`:''}</div>
  </section><section class="admin-config-section config-builder"><div class="config-builder-col"><h3>Cadastrar seções no projeto</h3><p class="muted">Crie novas seções para organizar os campos das atividades.</p><div class="filters section-editor"><input id="extraSectionName" list="existingProjectSections" autocomplete="off" placeholder="Digite ou selecione uma seção" aria-label="Nome da seção"><datalist id="existingProjectSections">${['Equipamento','Link','Localização / Unidade','Outras informações',...(p.data.extraSections||[])].filter(name=>!(p.data.removedDefaultSections||[]).includes(name)).map(name=>`<option value="${esc(name)}"></option>`).join('')}</datalist><button id="addExtraSection" class="section-editor-action" type="button" title="Cadastrar seção" aria-label="Cadastrar seção"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></button><button id="deleteSelectedSection" class="section-editor-action" type="button" title="Excluir seção selecionada" aria-label="Excluir seção selecionada"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M5 6l1 14h12l1-14M10 10v7M14 10v7"/></svg></button></div></div><div class="config-builder-col"><h3>Cadastrar campos no projeto</h3><p class="muted">Os campos adicionados aparecem em todas as atividades deste projeto, na seção escolhida.</p><div class="filters field-editor"><div class="field-name-picker"><input id="extraFieldName" list="existingProjectFields" autocomplete="off" placeholder="Nome do novo campo" aria-label="Digite ou selecione um campo"><datalist id="existingProjectFields">${allProjectFieldNames(p).map(name=>`<option value="${esc(name)}"></option>`).join('')}</datalist></div><select id="extraFieldSection" aria-label="Seção do campo">${['Equipamento','Link','Localização / Unidade','Outras informações',...(p.data.extraSections||[])].filter(x=>!(p.data.removedDefaultSections||[]).includes(x)).map(x=>`<option>${esc(x)}</option>`).join('')}</select><button id="addExtraField" class="secondary field-editor-action" type="button" title="Cadastrar campo" aria-label="Cadastrar campo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></button><button id="deleteSelectedField" class="extra-field-delete field-editor-action" type="button" title="Excluir campo selecionado" aria-label="Excluir campo selecionado"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M5 6l1 14h12l1-14M10 10v7M14 10v7"/></svg></button></div><div class="manual-activity"><button type="button" id="openNewActivity">Cadastrar nova atividade</button></div></div></section></div>`;
  $('#openProject').onclick=()=>{page='home';selectedActivity=null;render()};
  $('#saveProjectName').onclick=()=>{
@@ -281,7 +281,7 @@ if(adminTab==='Configurar projeto'){
    localStorage.removeItem('gi_search_'+p.id);
    projectId=null;selectedActivity=null;adminTab='Projetos';filterStatus='Todos';
    log('Projeto removido',name+' ('+ids.size+' atividades excluídas)');
-   save();close();render();toast('Projeto removido');
+   save();RunbookStorage.remove(p.id).catch(err=>console.warn('Arquivo antigo do projeto:',err));close();render();toast('Projeto removido');
   };
   overlay.querySelector('#deleteProjectConfirmation').focus();
  };
@@ -295,23 +295,70 @@ if(adminTab==='Configurar projeto'){
  $('#cropCancel').onclick=()=>{$('#cropEditor').classList.add('hidden');cropImage=null;$('#projectProfilePhoto').value=''};
  $('#removeProjectPhoto').onclick=()=>{delete p.data.profilePhoto;save();renderProjectAvatar();renderAdmin();toast('Foto removida')};
  let stagedActivity=null,stagedRunbook=null;
- $('#projectCsv').onchange=async e=>{try{stagedActivity=await readTabularFile(e.target.files[0]);if(!stagedActivity.headers.length)throw Error('Não encontrei cabeçalhos.');$('#projectPreview').innerHTML=`<p><b>Prévia detectada:</b> ${stagedActivity.rows.length} linhas · ${stagedActivity.headers.length} campos</p><div class="small">${stagedActivity.headers.map(esc).join(' · ')}</div><button id="confirmProjectImport">OK — aplicar modelo e importar atividades</button>`;$('#confirmProjectImport').onclick=()=>{let data=stagedActivity; p.data.activityTemplate=data.headers; p.data.extraFields=p.data.extraFields||[];let added=0;data.rows.forEach(row=>{if(!Object.values(row).some(v=>String(v??'').trim()))return;DB.activities.push({id:'imp_'+Date.now()+'_'+added,data:{projectId:p.id,row,status:'Pendente',analystName:null,analystId:null,startAt:null,endAt:null}});added++});save();log('Modelo de projeto importado',`${getName(p)}: ${added} atividades`);toast(`Modelo aplicado: ${data.headers.length} campos e ${added} atividades`);renderAdmin()}}catch(err){stagedActivity=null;$('#projectPreview').textContent='Não foi possível ler esse arquivo. Confira se é uma planilha válida e tente novamente. Detalhe: '+err.message}};
+ const runbookModelMessage=()=>p.data.runbookModel?`<p class="small muted">Modelo atual: ${esc(p.data.runbookFilename||'Planilha de Runbook')} · ${p.data.runbookModel.sections.length} seções · ${p.data.runbookModel.total} imagens</p>`:'';
+ $('#clearProjectImport').onclick=()=>{
+   // Não exclui atividades que já foram efetivamente importadas.
+   stagedActivity=null;$('#projectCsv').value='';$('#projectPreview').textContent='';$('#clearProjectImport').hidden=true;
+   toast('Seleção da planilha do projeto cancelada. Atividades existentes preservadas.');
+ };
+ $('#clearRunbookImport').onclick=async()=>{
+   if(stagedRunbook || $('#projectRunbook').value){
+     stagedRunbook=null;$('#projectRunbook').value='';$('#runbookPreview').innerHTML=runbookModelMessage();
+     $('#clearRunbookImport').hidden=!p.data.runbookModel;
+     toast('Seleção cancelada. Modelo já aplicado permanece no projeto.');return;
+   }
+   if(!p.data.runbookModel)return;
+   if(!confirm('Remover o modelo de Runbook aplicado a este projeto? Os dados das atividades não serão apagados.'))return;
+   const previous={runbookModel:p.data.runbookModel,runbookStorageKey:p.data.runbookStorageKey,runbookWorkbookBase64:p.data.runbookWorkbookBase64,runbookFilename:p.data.runbookFilename};
+   delete p.data.runbookModel;delete p.data.runbookStorageKey;delete p.data.runbookWorkbookBase64;delete p.data.runbookFilename;
+   try{save()}catch(error){Object.assign(p.data,previous);toast('Não foi possível atualizar os dados do projeto.');return}
+   try{await RunbookStorage.remove(p.id)}catch(error){console.warn('Não foi possível apagar o arquivo antigo:',error)}
+   $('#runbookPreview').textContent='';$('#clearRunbookImport').hidden=true;toast('Modelo de Runbook removido deste projeto.');
+ };
+ $('#projectCsv').onchange=async e=>{
+   const file=e.target.files[0];if(!file)return;
+   $('#clearProjectImport').hidden=false;
+   try{
+     stagedActivity=await readTabularFile(file);
+     if(!stagedActivity.headers.length)throw Error('Não encontrei cabeçalhos.');
+     $('#projectPreview').innerHTML=`<p><b>Prévia detectada:</b> ${stagedActivity.rows.length} linhas · ${stagedActivity.headers.length} campos</p><div class="small">${stagedActivity.headers.map(esc).join(' · ')}</div><button id="confirmProjectImport">OK — aplicar modelo e importar atividades</button>`;
+     $('#confirmProjectImport').onclick=()=>{let data=stagedActivity;p.data.activityTemplate=data.headers;p.data.extraFields=p.data.extraFields||[];let added=0;data.rows.forEach(row=>{if(!Object.values(row).some(v=>String(v??'').trim()))return;DB.activities.push({id:'imp_'+Date.now()+'_'+added,data:{projectId:p.id,row,status:'Pendente',analystName:null,analystId:null,startAt:null,endAt:null}});added++});save();log('Modelo de projeto importado',`${getName(p)}: ${added} atividades`);toast(`Modelo aplicado: ${data.headers.length} campos e ${added} atividades`);renderAdmin()};
+   }catch(err){stagedActivity=null;$('#projectPreview').textContent='Não foi possível ler esse arquivo. Confira se é uma planilha válida e tente novamente. Detalhe: '+err.message}
+ };
  $('#projectRunbook').onchange=async e=>{
+   const file=e.target.files[0];if(!file)return;
+   $('#clearRunbookImport').hidden=false;
    const preview=$('#runbookPreview');preview.textContent='Lendo abas, títulos e campos da planilha…';
    try{
-     stagedRunbook=await RunbookModel.read(e.target.files[0]);
+     stagedRunbook=await RunbookModel.read(file);
      const {model}=stagedRunbook;
      preview.innerHTML=`<p><b>Modelo identificado:</b> ${model.sections.length} seções e ${model.total} espaços para evidências/fotografias.</p><div class="runbook-import-summary">${model.sections.map(sec=>`<div><b>${esc(sec.title)}</b> <span class="small muted">(${sec.items.length} campos)</span><ul>${sec.items.map(item=>`<li>${esc(item.title)}${item.description?`<small>${esc(item.description)}</small>`:''}</li>`).join('')}</ul></div>`).join('')}</div>${stagedRunbook.converted?'<p class="small muted">O arquivo foi convertido para XLSX para permitir exportação com imagens; revise a formatação do resultado.</p>':''}<button id="confirmRunbookImport">Aplicar este modelo ao projeto</button>`;
-     $('#confirmRunbookImport').onclick=()=>{
-       const previous={runbookModel:p.data.runbookModel,runbookWorkbookBase64:p.data.runbookWorkbookBase64,runbookFilename:p.data.runbookFilename};
-       p.data.runbookModel=model;
-       p.data.runbookWorkbookBase64=stagedRunbook.workbookBase64;
-       p.data.runbookFilename=stagedRunbook.filename;
-       try{save()}catch(error){Object.assign(p.data,previous);return toast('Espaço local insuficiente para guardar essa planilha. Reduza seu tamanho antes de importar.')}
-       log('Modelo de Runbook importado',`${getName(p)}: ${model.sections.length} seções, ${model.total} imagens`);
-       toast(`Runbook configurado: ${model.sections.length} seções e ${model.total} campos`);
-       renderAdmin();
-     }
+     $('#confirmRunbookImport').onclick=async()=>{
+       const current=stagedRunbook;if(!current)return;
+       const btn=$('#confirmRunbookImport');btn.disabled=true;btn.textContent='Salvando modelo no navegador…';
+       const previous={runbookModel:p.data.runbookModel,runbookStorageKey:p.data.runbookStorageKey,runbookWorkbookBase64:p.data.runbookWorkbookBase64,runbookFilename:p.data.runbookFilename};
+       let oldBuffer=null;
+       try{
+         oldBuffer=await RunbookStorage.get(p.id);
+         await RunbookStorage.put(p.id,current.workbookBuffer);
+         p.data.runbookModel=current.model;
+         p.data.runbookStorageKey=p.id;
+         p.data.runbookFilename=current.filename;
+         delete p.data.runbookWorkbookBase64;
+         try{save()}
+         catch(error){
+           Object.assign(p.data,previous);
+           if(previous.runbookStorageKey===undefined)delete p.data.runbookStorageKey;
+           if(previous.runbookWorkbookBase64===undefined)delete p.data.runbookWorkbookBase64;
+           if(oldBuffer)await RunbookStorage.put(p.id,oldBuffer);else await RunbookStorage.remove(p.id);
+           throw new Error('O banco de atividades no armazenamento local está cheio. O arquivo do Runbook foi preservado, mas outros dados podem precisar de espaço.');
+         }
+         try{log('Modelo de Runbook importado',`${getName(p)}: ${current.model.sections.length} seções, ${current.model.total} imagens`)}catch(error){console.warn('Não foi possível acrescentar registro de auditoria:',error)}
+         stagedRunbook=null;
+         toast(`Runbook configurado: ${current.model.sections.length} seções e ${current.model.total} campos`);
+         renderAdmin();
+       }catch(err){console.error('Erro ao guardar Runbook:',err);preview.insertAdjacentHTML('beforeend',`<p class="small import-error">Não foi possível armazenar o Runbook: ${esc(err.message)}. Verifique se o armazenamento de sites está habilitado neste navegador.</p>`);btn.disabled=false;btn.textContent='Aplicar este modelo ao projeto'}
+     };
    }catch(err){stagedRunbook=null;preview.textContent='Não foi possível interpretar o modelo. '+err.message}
  };
  const sectionInput=$('#extraSectionName'),addSectionButton=$('#addExtraSection'),deleteSectionButton=$('#deleteSelectedSection');
@@ -355,7 +402,20 @@ function resetTestDataOnce(){
   }
   localStorage.setItem(marker,'done');
 }
-async function init(){resetTestDataOnce();const themeBtn=document.getElementById('themeToggle');const setTheme=(mode)=>{document.documentElement.dataset.theme=mode;localStorage.setItem('gi_theme',mode);themeBtn?.setAttribute('aria-label',mode==='light'?'Ativar tema escuro':'Ativar tema claro');themeBtn?.setAttribute('title',mode==='light'?'Ativar tema escuro':'Ativar tema claro')};setTheme(localStorage.getItem('gi_theme')==='light'?'light':'dark');if(themeBtn)themeBtn.onclick=()=>setTheme(document.documentElement.dataset.theme==='light'?'dark':'light');try{let saved=localStorage.getItem('gestaoImplantacaoDB');DB=saved?JSON.parse(saved):{activities:[],analysts:[],log:[],projects:[],runbooks:[],users:[]};for(const key of ['activities','analysts','log','projects','runbooks','users'])if(!Array.isArray(DB[key]))DB[key]=[];}catch(e){DB={activities:[],analysts:[],log:[],projects:[],runbooks:[],users:[]};}document.querySelectorAll('.nav').forEach(b=>{b.addEventListener('click',e=>{if(e.ctrlKey||e.metaKey||e.shiftKey||e.button!==0)return;if(b.dataset.page==='admin'&&!isAdmin()){e.preventDefault();return toast('Acesso exclusivo do administrador')}e.preventDefault();page=b.dataset.page;selectedActivity=null;render()})});
+async function migrateLegacyRunbookFiles(){
+ // Conversão automática e segura de modelos antigos que ocupavam localStorage.
+ for(const p of arr('projects')){
+   const old=p?.data?.runbookWorkbookBase64;
+   if(!old)continue;
+   try{
+     const bytes=Uint8Array.from(atob(old),c=>c.charCodeAt(0));
+     await RunbookStorage.put(p.id,bytes.buffer);
+     p.data.runbookStorageKey=p.id;delete p.data.runbookWorkbookBase64;
+     try{save()}catch(err){p.data.runbookWorkbookBase64=old;delete p.data.runbookStorageKey;throw err}
+   }catch(err){console.warn('Modelo antigo preservado no armazenamento anterior:',err)}
+ }
+}
+async function init(){resetTestDataOnce();const themeBtn=document.getElementById('themeToggle');const setTheme=(mode)=>{document.documentElement.dataset.theme=mode;localStorage.setItem('gi_theme',mode);themeBtn?.setAttribute('aria-label',mode==='light'?'Ativar tema escuro':'Ativar tema claro');themeBtn?.setAttribute('title',mode==='light'?'Ativar tema escuro':'Ativar tema claro')};setTheme(localStorage.getItem('gi_theme')==='light'?'light':'dark');if(themeBtn)themeBtn.onclick=()=>setTheme(document.documentElement.dataset.theme==='light'?'dark':'light');try{let saved=localStorage.getItem('gestaoImplantacaoDB');DB=saved?JSON.parse(saved):{activities:[],analysts:[],log:[],projects:[],runbooks:[],users:[]};for(const key of ['activities','analysts','log','projects','runbooks','users'])if(!Array.isArray(DB[key]))DB[key]=[];}catch(e){DB={activities:[],analysts:[],log:[],projects:[],runbooks:[],users:[]};}await migrateLegacyRunbookFiles();document.querySelectorAll('.nav').forEach(b=>{b.addEventListener('click',e=>{if(e.ctrlKey||e.metaKey||e.shiftKey||e.button!==0)return;if(b.dataset.page==='admin'&&!isAdmin()){e.preventDefault();return toast('Acesso exclusivo do administrador')}e.preventDefault();page=b.dataset.page;selectedActivity=null;render()})});
  const requested=new URLSearchParams(location.search);const requestedProject=requested.get('project');if(requestedProject&&arr('projects').some(p=>p.id===requestedProject))projectId=requestedProject;
  const requestedPage=requested.get('page');if(['home','runbook','logs','admin'].includes(requestedPage))page=requestedPage;
  if(sessionStorage.getItem('gi_authenticated')==='yes'&&localStorage.getItem('gi_user')){document.querySelector('.app').style.display='flex';render()}else showLogin();setInterval(()=>document.querySelectorAll('.elapsed[data-start]').forEach(el=>el.textContent='◴ '+elapsed(el.dataset.start)),1000)}

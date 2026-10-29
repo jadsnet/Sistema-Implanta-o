@@ -29,4 +29,8 @@ Em **Painel do administrador → Configurar projeto → Modelo de planilha de ru
 
 A imagem fica vinculada ao título e à posição original do campo. Em **Gerar Runbook (Excel)**, o sistema exporta o próprio arquivo-modelo importado, preservando as demais abas e adicionando imagens nas áreas correspondentes. XLS e ODS são convertidos para XLSX na importação (a formatação deve ser conferida). A leitura automática utiliza convenções de títulos de evidências/fotos e não substitui a revisão da prévia para modelos com formatação não convencional.
 
-O modelo importado é armazenado **somente no navegador** associado ao projeto. Planilhas ou imagens muito grandes podem ultrapassar o limite de armazenamento local; nesse caso o sistema avisa e não aplica o modelo. Sem servidor ou banco de dados, o arquivo-modelo e os prints não são compartilhados automaticamente entre computadores.
+O arquivo original do Runbook é guardado em **IndexedDB** (armazenamento local do navegador, sem Base64); apenas os títulos e a estrutura do modelo permanecem no banco de dados leve do projeto. Assim, o limite pequeno de **localStorage** não é consumido pela planilha original. Projetos antigos com Runbooks salvos em Base64 são migrados quando possível, preservando a versão anterior em caso de erro. O armazenamento continua sujeito à capacidade/configuração de cada navegador.
+
+Os botões **X** nas importações permitem cancelar uma seleção sem apagar atividades. Na área de Runbook, quando não há nova seleção pendente e existe um modelo aplicado, o X permite removê-lo depois de uma confirmação. A planilha não é compartilhada com outros computadores e não há sincronização em nuvem.
+
+Para melhor funcionamento do armazenamento local, abra o sistema num endereço `http://localhost` (por exemplo: `python -m http.server 8000`) e continue utilizando o mesmo endereço e navegador. A abertura por `file://` pode ter limitações diferentes dependendo do navegador.

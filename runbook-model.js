@@ -71,11 +71,6 @@
     // Quando há uma aba de evidências e outra de fotos, exibir ambas na ordem da planilha.
     return {version:2,sections,total:sections.reduce((n,s)=>n+s.items.length,0),sheetNames:[...workbook.SheetNames]};
   }
-  function toBase64(buffer){
-    const bytes=new Uint8Array(buffer);let result='';const chunk=0x8000;
-    for(let i=0;i<bytes.length;i+=chunk)result+=String.fromCharCode(...bytes.subarray(i,i+chunk));
-    return btoa(result);
-  }
   async function read(file){
     if(!file)throw Error('Escolha uma planilha de Runbook.');
     if(!window.XLSX)throw Error('A biblioteca de leitura de planilhas não foi carregada.');
@@ -86,7 +81,7 @@
     // Arquivos XLS/ODS são convertidos para XLSX somente para permitir adicionar imagens.
     const originalExt=(file.name.split('.').pop()||'').toLowerCase();
     if(!['xlsx','xlsm'].includes(originalExt))input=XLSX.write(wb,{bookType:'xlsx',type:'array'});
-    return {model,workbookBase64:toBase64(input),filename:file.name,converted:!['xlsx','xlsm'].includes(originalExt)};
+    return {model,workbookBuffer:input,filename:file.name,converted:!['xlsx','xlsm'].includes(originalExt)};
   }
   window.RunbookModel={read,buildModel};
 })();

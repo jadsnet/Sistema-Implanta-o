@@ -1257,3 +1257,13 @@ html[data-theme="light"] .new-activity-overlay .new-activity-grid input{backgrou
 .runbook-import-summary li{padding:8px 0;border-bottom:1px solid rgba(180,155,194,.16);font-size:12px}
 .runbook-import-summary li small{display:block;margin-top:5px;line-height:1.45;opacity:.8;font-style:italic}
 html[data-theme="light"] .runbook-import-summary>div{background:rgba(255,255,255,.16);border-color:rgba(69,38,92,.15)}
+
+/* Botões de limpar importações: mesma identidade do X dos demais diálogos. */
+.admin-config-section .import-controls{display:flex;align-items:center;flex-wrap:wrap;gap:12px;max-width:100%;margin:4px 0 10px}
+.admin-config-section .import-controls .filelabel{margin:0!important;flex:0 1 auto}
+.admin-config-section .import-clear-button{display:inline-flex;align-items:center;justify-content:center;flex:0 0 36px;width:36px;height:36px;padding:0;border:0;border-radius:9px;background:#8218c9!important;color:#fff!important;box-shadow:3px 5px 11px rgba(25,8,40,.28)!important;cursor:pointer}
+.admin-config-section .import-clear-button:hover{background:#9f24ec!important;filter:brightness(1.07)}
+.admin-config-section .import-clear-button svg{display:block;width:18px;height:18px}
+.admin-config-section .import-clear-button[hidden]{display:none!important}
+.admin-config-section .import-error{color:#ffc4c4;margin-top:10px;font-weight:600}
+html[data-theme="light"] .admin-config-section .import-error{color:#852031}
