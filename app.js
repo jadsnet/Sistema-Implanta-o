@@ -9,8 +9,15 @@ let toastTimer;
 function toast(s, duration=5000){
  const t=$('#toast');if(!t)return;
  clearTimeout(toastTimer);
- t.textContent=s;t.style.display='block';t.classList.add('toast-visible');
- toastTimer=setTimeout(()=>{t.classList.remove('toast-visible');t.style.display='none'},duration);
+ const saved=s==='Alterações salvas ✅'||s==='Alterações salvas';
+ t.textContent=saved?'Alterações salvas':s;
+ t.classList.toggle('toast-with-icon',saved);
+ if(saved){
+  // Ícone vetorial equivalente ao enviado; o traço herda a cor do texto.
+  t.insertAdjacentHTML('beforeend','<svg class="toast-check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="2.7"/><path d="m6.8 12.2 4.2 3.8 6.5-8"/></svg>');
+ }
+ t.style.display=saved?'flex':'block';t.classList.add('toast-visible');
+ toastTimer=setTimeout(()=>{t.classList.remove('toast-visible','toast-with-icon');t.style.display='none'},duration);
 }
 function save(){localStorage.setItem('gestaoImplantacaoDB',JSON.stringify(DB))}
 // Notificação discreta depois que o usuário abandona um campo editado.
@@ -587,6 +594,50 @@ init();
 // Relatório flexível por colunas, status, analistas e formato.
 function formatReportDateTime(value){if(!value)return '';const d=new Date(value);return Number.isNaN(d.getTime())?'':d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})}
 function reportDateMatches(a,day){const d=a.data||{};if(!day)return true;return [d.startAt,d.endAt,d.createdAt,d.updatedAt,...(d.history||[]).map(h=>h.at)].some(t=>localDay(t)===day)||activityDate(a)===day}
+// A opção "Usar filtro da tela" respeita inclusive a pesquisa e os itens carregados.
+function reportVisibleActivities(activities){
+ const byId=new Map(activities.map(a=>[String(a.id),a]));
+ return [...document.querySelectorAll('#activityList .activity-line[data-view]')]
+  .map(line=>byId.get(line.dataset.view)).filter(Boolean);
+}
+
+// O SheetJS da aplicação grava os dados; o JSZip aplica o estilo no XML do Excel.
+// Assim o relatório recebe cabeçalho roxo mesmo usando o SheetJS Community.
+async function styleActivityReportWorkbook(bytes){
+ if(!window.JSZip)throw new Error('Biblioteca de formatação do Excel indisponível.');
+ const zip=await JSZip.loadAsync(bytes);
+ const sheet=zip.file('xl/worksheets/sheet1.xml');
+ if(!sheet)throw new Error('Aba de atividades não encontrada no arquivo.');
+ let xml=await sheet.async('string');
+ const header=xml.match(/<(?:[\w-]+:)?row\b(?=[^>]*\br="1")[^>]*>[\s\S]*?<\/(?:[\w-]+:)?row>/);
+ if(!header)throw new Error('Cabeçalho do relatório não encontrado.');
+ const styledHeader=header[0]
+  .replace(/^<((?:[\w-]+:)?row)\b([^>]*)>/,(tag,name,attrs)=>`<${name}${attrs.replace(/\s+(?:ht|customHeight)="[^"]*"/g,'')} ht="28" customHeight="1">`)
+  .replace(/<((?:[\w-]+:)?c)\b([^>]*?)(\/?)>/g,(tag,name,attrs,slash)=>`<${name}${attrs.replace(/\s+s="[^"]*"/g,'')} s="1"${slash}>`);
+ xml=xml.replace(header[0],styledHeader);
+ zip.file('xl/worksheets/sheet1.xml',xml);
+ const styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+  +'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+  +'<fonts count="2"><font><sz val="11"/><name val="Aptos"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Aptos"/></font></fonts>'
+  +'<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF351C4F"/><bgColor indexed="64"/></patternFill></fill></fills>'
+  +'<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+  +'<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+  +'<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+  +'<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf></cellXfs>'
+  +'<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles><dxfs count="0"/>'
+  +'<tableStyles count="0" defaultTableStyle="TableStyleMedium9" defaultPivotStyle="PivotStyleLight16"/>'
+  +'</styleSheet>';
+ if(!zip.file('xl/styles.xml')){
+  const contentFile=zip.file('[Content_Types].xml');
+  const relFile=zip.file('xl/_rels/workbook.xml.rels');
+  if(!contentFile||!relFile)throw new Error('Estrutura de estilos do Excel incompleta.');
+  const content=await contentFile.async('string'),rels=await relFile.async('string');
+  zip.file('[Content_Types].xml',content.replace('</Types>','<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'));
+  zip.file('xl/_rels/workbook.xml.rels',rels.replace('</Relationships>','<Relationship Id="rIdReportStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'));
+ }
+ zip.file('xl/styles.xml',styles);
+ return zip.generateAsync({type:'uint8array',compression:'DEFLATE'});
+}
 function openActivityReport(){
  document.getElementById('activityReportOverlay')?.remove();
  const acts=projectActivities(),p=project();
@@ -599,15 +650,23 @@ function openActivityReport(){
   let preferences={};try{preferences=JSON.parse(localStorage.getItem(preferenceKey)||'{}')||{}}catch(e){preferences={}}
  const overlay=document.createElement('div');overlay.id='activityReportOverlay';overlay.className='report-overlay';
  const group=(items,cls)=>`<div class="report-options ${cls}">${items.map((label,i)=>`<label><input type="checkbox" value="${i}" checked><span>${esc(label)}</span></label>`).join('')}</div>`;
- overlay.innerHTML=`<div class="report-dialog report-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="reportTitle"><div class="report-dialog-head"><h3 id="reportTitle">Extrair relatório</h3><button type="button" class="report-close" aria-label="Fechar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><p class="small muted">Escolha os campos, os status, os analistas e o período desejado. Suas opções ficam salvas neste navegador.</p><div class="report-date-filter"><label>Período <select id="reportPeriod"><option value="screen">Usar período da tela</option><option value="all">Todas as datas</option><option value="specific">Data específica</option></select></label><label class="report-date-picker" id="reportDatePicker">Selecionar data<input type="date" id="reportSelectedDate"></label></div><div class="report-group"><div class="report-group-title"><b>Campos do projeto</b><label><input type="checkbox" class="report-toggle" data-target="report-fields" checked> Selecionar todos</label></div>${group(columns.map(c=>c[0]),'report-fields')}</div><div class="report-group"><div class="report-group-title"><b>Status</b><label><input type="checkbox" class="report-toggle" data-target="report-statuses" checked> Selecionar todos</label></div>${group(statuses,'report-statuses')}</div><div class="report-group"><div class="report-group-title"><b>Analistas</b><label><input type="checkbox" class="report-toggle" data-target="report-analysts" checked> Selecionar todos</label></div>${group([...analysts,'Sem analista'],'report-analysts')}</div><div class="report-dialog-actions"><label class="report-format-label">Formato <select id="reportFormat"><option value="xlsx">XLSX</option><option value="xls">XLS</option><option value="xlsm">XLSM</option><option value="csv">CSV</option></select></label><button type="button" class="secondary" id="cancelActivityReport">Cancelar</button><button type="button" id="downloadActivityReport">Baixar relatório</button></div></div>`;
+ overlay.innerHTML=`<div class="report-dialog report-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="reportTitle"><div class="report-dialog-head"><h3 id="reportTitle">Extrair relatório</h3><button type="button" class="report-close" aria-label="Fechar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><p class="small muted">Escolha os campos e a origem das atividades. Suas opções ficam salvas neste navegador.</p><div class="report-date-filter"><label>Período <select id="reportPeriod"><option value="screen">Usar filtro da tela</option><option value="all">Todas as datas</option><option value="specific">Data específica</option></select></label><label class="report-date-picker" id="reportDatePicker">Selecionar data<input type="date" id="reportSelectedDate"></label><p class="report-screen-note small muted" id="reportScreenNote">O relatório seguirá exatamente a lista visível na tela, com pesquisa, status e analistas aplicados, na mesma ordem. Os filtros adicionais abaixo não serão usados.</p></div><div class="report-group"><div class="report-group-title"><b>Campos do projeto</b><label><input type="checkbox" class="report-toggle" data-target="report-fields" checked> Selecionar todos</label></div>${group(columns.map(c=>c[0]),'report-fields')}</div><div class="report-group report-optional-filter"><div class="report-group-title"><b>Status</b><label><input type="checkbox" class="report-toggle" data-target="report-statuses" checked> Selecionar todos</label></div>${group(statuses,'report-statuses')}</div><div class="report-group report-optional-filter"><div class="report-group-title"><b>Analistas</b><label><input type="checkbox" class="report-toggle" data-target="report-analysts" checked> Selecionar todos</label></div>${group([...analysts,'Sem analista'],'report-analysts')}</div><div class="report-dialog-actions"><label class="report-format-label">Formato <select id="reportFormat"><option value="xlsx">XLSX</option><option value="xls">XLS</option><option value="xlsm">XLSM</option><option value="csv">CSV</option></select></label><button type="button" class="secondary" id="cancelActivityReport">Cancelar</button><button type="button" id="downloadActivityReport">Baixar relatório</button></div><p class="small muted report-format-note">Cabeçalho roxo e fonte branca: XLSX e XLSM. XLS antigo e CSV não recebem cores.</p></div>`;
  document.body.appendChild(overlay);
   const rep=(cls,names)=>{const selected=preferences[cls];if(!Array.isArray(selected))return;overlay.querySelectorAll('.'+cls+' input').forEach((el,i)=>{el.checked=selected.includes(names[i])})};
   rep('report-fields',columns.map(c=>c[0]));rep('report-statuses',statuses);rep('report-analysts',[...analysts,'Sem analista']);
   overlay.querySelector('#reportFormat').value=['xlsx','xls','xlsm','csv'].includes(preferences.format)?preferences.format:'xlsx';
   overlay.querySelector('#reportPeriod').value=['screen','all','specific'].includes(preferences.period)?preferences.period:'screen';
   overlay.querySelector('#reportSelectedDate').value=preferences.day||localDay(new Date());
-  const updateReportDate=()=>{overlay.querySelector('#reportDatePicker').hidden=overlay.querySelector('#reportPeriod').value!=='specific'};updateReportDate();
-  overlay.querySelector('#reportPeriod').onchange=updateReportDate;
+  const updateReportMode=()=>{
+   const mode=overlay.querySelector('#reportPeriod').value,onScreen=mode==='screen';
+   overlay.querySelector('#reportDatePicker').hidden=mode!=='specific';
+   overlay.querySelector('#reportScreenNote').hidden=!onScreen;
+   overlay.querySelectorAll('.report-optional-filter').forEach(group=>{
+    group.classList.toggle('report-filter-inactive',onScreen);
+    group.querySelectorAll('input').forEach(input=>input.disabled=onScreen);
+   });
+  };updateReportMode();
+  overlay.querySelector('#reportPeriod').onchange=updateReportMode;
   const updateReportToggles=()=>overlay.querySelectorAll('.report-toggle').forEach(t=>{const inputs=[...overlay.querySelectorAll('.'+t.dataset.target+' input')];t.checked=inputs.length>0&&inputs.every(x=>x.checked)});updateReportToggles();
   const storePreferences=()=>{const picked=(cls,names)=>[...overlay.querySelectorAll('.'+cls+' input')].filter(x=>x.checked).map(x=>names[Number(x.value)]);const next={
    'report-fields':picked('report-fields',columns.map(c=>c[0])),
@@ -619,12 +678,16 @@ function openActivityReport(){
   const close=()=>{storePreferences();overlay.remove()};overlay.querySelector('.report-close').onclick=close;overlay.querySelector('#cancelActivityReport').onclick=close;overlay.onclick=e=>{if(e.target===overlay)close()};
  overlay.querySelectorAll('.report-toggle').forEach(t=>t.onchange=()=>overlay.querySelectorAll('.'+t.dataset.target+' input').forEach(x=>x.checked=t.checked));
  overlay.querySelectorAll('.report-options').forEach(g=>g.addEventListener('change',()=>{let t=overlay.querySelector('.report-toggle[data-target="'+g.classList[1]+'"]');if(t)t.checked=[...g.querySelectorAll('input')].every(x=>x.checked)}));
- overlay.querySelector('#downloadActivityReport').onclick=()=>{
+ overlay.querySelector('#downloadActivityReport').onclick=async()=>{
   const indices=cls=>[...overlay.querySelectorAll('.'+cls+' input:checked')].map(x=>Number(x.value));
   const ci=indices('report-fields'),si=indices('report-statuses'),ai=indices('report-analysts');
-  if(!ci.length||!si.length||!ai.length)return toast('Selecione ao menos um campo, status e analista.');
+  const period=overlay.querySelector('#reportPeriod').value;
+  if(!ci.length||(period!=='screen'&&(!si.length||!ai.length)))return toast('Selecione ao menos um campo, status e analista.');
   const chosen=ci.map(i=>columns[i]);const statusSet=new Set(si.map(i=>statuses[i]));const analystSet=new Set(ai.map(i=>[...analysts,'Sem analista'][i]));
-  const period=overlay.querySelector('#reportPeriod').value,day=overlay.querySelector('#reportSelectedDate').value;if(period==='specific'&&!day)return toast('Selecione a data para extrair o relatório');const inPeriod=period==='all'?acts:period==='specific'?acts.filter(a=>reportDateMatches(a,day)):dateActivities(acts);const rows=newestActivities(inPeriod.filter(a=>statusSet.has(a.data.status||'Pendente')&&analystSet.has(a.data.analystName||'Sem analista')));
+  const day=overlay.querySelector('#reportSelectedDate').value;
+  if(period==='specific'&&!day)return toast('Selecione a data para extrair o relatório');
+  const rows=period==='screen'?reportVisibleActivities(acts):newestActivities((period==='all'?acts:acts.filter(a=>reportDateMatches(a,day))).filter(a=>statusSet.has(a.data.status||'Pendente')&&analystSet.has(a.data.analystName||'Sem analista')));
+  if(!rows.length)return toast(period==='screen'?'Nenhuma atividade exibida na tela para exportar.':'Nenhuma atividade corresponde aos filtros escolhidos.');
   const matrix=[chosen.map(c=>c[0]),...rows.map(a=>chosen.map(c=>String(c[1](a)??'')))];
   const format=overlay.querySelector('#reportFormat').value;
   const filename='Relatorio_'+String(getName(p)).replace(/[^a-zA-Z0-9_-]+/g,'_')+'_'+new Date().toISOString().slice(0,10);
@@ -634,7 +697,23 @@ function openActivityReport(){
    blob=new Blob(['\ufeff'+matrix.map(row=>row.map(safe).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
   }else{
    if(!window.XLSX)return toast('Biblioteca de planilhas indisponível. Verifique a conexão ou selecione CSV.');
-   try{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(matrix),'Atividades');const bookType=format==='xls'?'biff8':format==='xlsm'?'xlsm':'xlsx';const bytes=XLSX.write(wb,{bookType,type:'array'});blob=new Blob([bytes],{type:'application/octet-stream'});}catch(err){return toast('Falha ao gerar planilha: '+err.message)}
+   const button=overlay.querySelector('#downloadActivityReport');button.disabled=true;button.textContent='Preparando relatório…';
+   try{
+    const wb=XLSX.utils.book_new(),sheet=XLSX.utils.aoa_to_sheet(matrix);
+    sheet['!cols']=matrix[0].map((heading,i)=>{
+     const longest=matrix.reduce((max,row)=>Math.max(max,...String(row[i]??'').split(/\r?\n/).map(line=>Math.min(line.length,57))),0);
+     const longField=/observ|descri|endere|localidade|coment|detalh/i.test(heading);
+     return {wch:Math.min(60,Math.max(longField?30:15,longest+3))};
+    });
+    sheet['!rows']=[{hpt:28}];
+    sheet['!autofilter']={ref:'A1:'+XLSX.utils.encode_col(chosen.length-1)+matrix.length};
+    XLSX.utils.book_append_sheet(wb,sheet,'Atividades');
+    const bookType=format==='xls'?'biff8':format==='xlsm'?'xlsm':'xlsx';
+    const bytes=XLSX.write(wb,{bookType,type:'array',cellStyles:true});
+    const result=format==='xlsx'||format==='xlsm'?await styleActivityReportWorkbook(bytes):bytes;
+    blob=new Blob([result],{type:'application/octet-stream'});
+   }catch(err){console.error('Falha ao gerar relatório',err);return toast('Falha ao gerar planilha: '+err.message)}
+   finally{button.disabled=false;button.textContent='Baixar relatório'}
   }
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename+'.'+format;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);close();toast('Relatório exportado: '+rows.length+' atividades.');
  };

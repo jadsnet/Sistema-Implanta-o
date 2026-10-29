@@ -1625,3 +1625,21 @@ html[data-theme="light"] .evidence-group-label{color:#482b5b;background:#dcc4ec}
   .admin-config-section #editRunbookLayout{margin-left:0!important}
   .config-builder .admin-edit-action,.config-builder .manual-activity{min-height:48px}
 }
+
+/* Confirmação de salvamento: o ícone acompanha exatamente a cor do texto. */
+#toast.toast-with-icon{align-items:center;gap:9px}
+#toast .toast-check-icon{display:block;flex:0 0 19px;width:19px;height:19px;color:inherit;stroke:currentColor}
+
+/* Runbook: cartões sem as linhas de contorno apontadas na referência. */
+.runbook-detail .evidence-section,
+.runbook-detail .evidence-section .evidence-card,
+html[data-theme="light"] .runbook-detail .evidence-section .evidence-card{
+  border:0!important;outline:0!important;
+}
+
+/* No modo "Usar filtro da tela" os seletores adicionais não alteram a listagem. */
+.report-screen-note{margin:0;flex:1 1 100%;line-height:1.45}
+.report-screen-note[hidden]{display:none!important}
+.report-optional-filter.report-filter-inactive{opacity:.48}
+.report-filter-inactive input{cursor:not-allowed}
+.report-format-note{margin:7px 0 0;font-size:11px}
