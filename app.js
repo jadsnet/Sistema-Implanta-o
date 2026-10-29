@@ -29,7 +29,7 @@ document.addEventListener('focusout',event=>{
  if(/^(?:search|rbSearch|customAnalyst|customStatus|otherDate|logSearch|login)/i.test(el.id||''))return;
  const activeContext=el.closest('.runbook-editor-window,.activity-detail-screen,.admin-config-section,.runbook-detail,.activity-modal,.admin-activity-editor');
  if(!activeContext)return;
- setTimeout(()=>toast('Salvo automaticamente',3000),0);
+ setTimeout(()=>toast('Alterações salvas ✅',3000),0);
 },true);
 
 function log(action,detail='',actId=''){DB.log.unshift({id:'log_'+Date.now(),data:{act:action,action,detail,actId,ts:new Date().toISOString(),user:localStorage.getItem('gi_user')||'Administrador'}});save()}
@@ -259,7 +259,7 @@ function renderRunbook(){let acts=projectActivities();$('#appContent').innerHTML
    if(!run){run={id:'rb_'+Date.now(),data:{activityId:id,slots:[],by:currentUser(),startedAt:new Date().toISOString()}};DB.runbooks.push(run)}
    run.data.images=[];run.data.imageStorageKey=imageStorageKey;
    run.data.slotKeys=slotKeys;run.data.updatedAt=new Date().toISOString();
-   save();if(!silent)toast('Salvo automaticamente',3000);
+   save();if(!silent)toast('Alterações salvas ✅',3000);
   });
   return imageWriteQueue;
  }

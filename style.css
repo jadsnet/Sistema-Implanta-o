@@ -1524,3 +1524,104 @@ html[data-theme="light"] .project-exit-button{background:#78509b!important}
 .evidence-group-label{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.02em;color:#e6c8fa;
  background:#64427f;border-radius:6px;padding:4px 8px;margin-bottom:7px;align-self:flex-start}
 html[data-theme="light"] .evidence-group-label{color:#482b5b;background:#dcc4ec}
+
+/* Padronização visual da navegação e das ações de configuração do projeto. */
+.topline{
+  align-items:center!important;
+  gap:clamp(12px,2vw,28px);
+  min-height:70px;
+}
+.topline>div:first-child{min-width:0;flex:0 1 auto}
+.topline .eyebrow{line-height:1.2;margin-bottom:6px}
+.topline .page-title-row{align-items:center;gap:14px}
+.topline .page-title-row .title{margin:0!important;line-height:1.16}
+.topline .top-actions{
+  display:flex;align-items:center;justify-content:flex-end;
+  flex:0 1 auto;flex-wrap:nowrap;gap:12px;
+  min-width:0;margin-left:auto;
+}
+.topline .user-picker{display:flex;align-items:center;gap:11px;margin:0;flex:none}
+.topline .logout-button{margin-left:0}
+.topline .watermark{
+  margin:0;flex:0 1 auto;min-width:0;max-width:24vw;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  line-height:1.2;
+}
+.topline .project-exit-button{
+  box-sizing:border-box;height:35px;min-height:35px;
+  padding:0 12px!important;gap:7px;
+  border-radius:9px!important;font-size:12px;font-weight:650;
+  white-space:nowrap;flex:none;
+}
+.topline .project-exit-button svg{width:17px;height:17px;flex:0 0 17px}
+
+/* Duas colunas da configuração compartilham o mesmo alinhamento inferior. */
+.config-builder .config-builder-col{display:flex;flex-direction:column;align-items:stretch}
+.config-builder .admin-edit-action,
+.config-builder .manual-activity{
+  display:flex;align-items:center;justify-content:flex-start;
+  margin:auto 0 0!important;padding-top:15px;min-height:54px;
+}
+
+/* O Salvar nome define o padrão de tamanho/cor dos demais botões de ação. */
+.admin-config-section #saveProjectName,
+.admin-config-section #editRunbookLayout,
+.config-builder #openAdminActivityEditor,
+.config-builder #openNewActivity{
+  box-sizing:border-box;display:inline-flex!important;
+  align-items:center;justify-content:center;gap:7px;
+  height:38px!important;min-height:38px!important;
+  padding:0 13px!important;margin-top:0!important;margin-bottom:0!important;
+  border:0!important;border-radius:9px!important;
+  background:#7917c7!important;color:#fff!important;
+  font-size:12px!important;font-weight:650!important;line-height:1.2!important;
+  white-space:nowrap;
+  box-shadow:3px 5px 11px rgba(25,8,42,.27)!important;
+  transition:background .16s ease,box-shadow .16s ease,transform .16s ease;
+}
+.admin-config-section #saveProjectName:hover,
+.admin-config-section #editRunbookLayout:not(:disabled):hover,
+.config-builder #openAdminActivityEditor:hover,
+.config-builder #openNewActivity:hover{
+  background:#9220df!important;filter:none;transform:translateY(-1px);
+}
+.admin-config-section #editRunbookLayout{margin-left:auto!important}
+.admin-config-section #editRunbookLayout:disabled{
+  opacity:.48;cursor:not-allowed;box-shadow:none!important;transform:none;
+}
+.admin-config-section #editRunbookLayout svg,
+.config-builder #openAdminActivityEditor svg{display:block;flex:none;width:15px;height:15px}
+
+/* Botões X com a mesma altura do Salvar nome, mas largura quadrada. */
+.admin-config-section #removeProjectPhoto,
+.admin-config-section .import-clear-button{
+  box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+  width:38px!important;min-width:38px!important;max-width:38px;
+  height:38px!important;min-height:38px!important;flex:0 0 38px!important;
+  padding:0!important;margin:0!important;
+  background:#7917c7!important;color:#fff!important;
+  border:0!important;border-radius:9px!important;
+  box-shadow:3px 5px 11px rgba(25,8,42,.27)!important;
+}
+.admin-config-section #removeProjectPhoto:not(:disabled):hover,
+.admin-config-section .import-clear-button:hover{
+  background:#9220df!important;filter:none;
+}
+.admin-config-section #removeProjectPhoto svg,
+.admin-config-section .import-clear-button svg{display:block;width:17px;height:17px}
+.admin-config-section .import-clear-button[hidden]{display:none!important}
+
+@media(max-width:1200px){
+  .topline .watermark{display:none}
+}
+@media(max-width:800px){
+  .topline{align-items:flex-start!important;min-height:0}
+  .topline .top-actions{width:100%;justify-content:flex-start;margin-left:0}
+  .topline .page-title-row{gap:10px}
+}
+@media(max-width:560px){
+  .topline .page-title-row{flex-wrap:wrap}
+  .topline .project-exit-button{height:33px;min-height:33px}
+  .admin-config-section #editRunbookLayout{margin-left:0!important}
+  .config-builder .admin-edit-action,.config-builder .manual-activity{min-height:48px}
+}

@@ -20,7 +20,7 @@ function open(project,onSave){
  document.body.appendChild(layer);
  const get=s=>layer.querySelector(s);
  const closed=()=>{layer.remove();document.removeEventListener('keydown',escapeHandler)};
- const autoSave=()=>{model.total=model.sections.reduce((n,sec)=>n+sec.items.length,0);try{onSave(JSON.parse(JSON.stringify(model)));if(typeof window.toast==='function')window.toast('Salvo automaticamente',3000)}catch(err){console.error('Falha ao salvar Runbook',err)}};
+ const autoSave=()=>{model.total=model.sections.reduce((n,sec)=>n+sec.items.length,0);try{onSave(JSON.parse(JSON.stringify(model)));if(typeof window.toast==='function')window.toast('Alterações salvas ✅',3000)}catch(err){console.error('Falha ao salvar Runbook',err)}};
  const close=()=>closed();
  const escapeHandler=e=>{if(e.key==='Escape'){e.preventDefault();close()}};
  document.addEventListener('keydown',escapeHandler);
