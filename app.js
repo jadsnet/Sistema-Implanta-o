@@ -593,6 +593,14 @@ init();
 
 // Relatório flexível por colunas, status, analistas e formato.
 function formatReportDateTime(value){if(!value)return '';const d=new Date(value);return Number.isNaN(d.getTime())?'':d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})}
+function formatReportHistory(a){
+ const history=Array.isArray(a.data?.history)?a.data.history:[];
+ return history.map(entry=>{
+  const date=new Date(entry.at||'');
+  const when=Number.isNaN(date.getTime())?'Data não informada':date.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  return `${when} · ${String(entry.analyst||entry.user||'Sem analista')} · ${String(entry.status||'Sem status')}`;
+ }).join('\n');
+}
 function reportDateMatches(a,day){const d=a.data||{};if(!day)return true;return [d.startAt,d.endAt,d.createdAt,d.updatedAt,...(d.history||[]).map(h=>h.at)].some(t=>localDay(t)===day)||activityDate(a)===day}
 // A opção "Usar filtro da tela" respeita inclusive a pesquisa e os itens carregados.
 function reportVisibleActivities(activities){
@@ -603,7 +611,7 @@ function reportVisibleActivities(activities){
 
 // O SheetJS da aplicação grava os dados; o JSZip aplica o estilo no XML do Excel.
 // Assim o relatório recebe cabeçalho roxo mesmo usando o SheetJS Community.
-async function styleActivityReportWorkbook(bytes){
+async function styleActivityReportWorkbook(bytes,historyColumn='',historyLines=[]){
  if(!window.JSZip)throw new Error('Biblioteca de formatação do Excel indisponível.');
  const zip=await JSZip.loadAsync(bytes);
  const sheet=zip.file('xl/worksheets/sheet1.xml');
@@ -615,6 +623,19 @@ async function styleActivityReportWorkbook(bytes){
   .replace(/^<((?:[\w-]+:)?row)\b([^>]*)>/,(tag,name,attrs)=>`<${name}${attrs.replace(/\s+(?:ht|customHeight)="[^"]*"/g,'')} ht="28" customHeight="1">`)
   .replace(/<((?:[\w-]+:)?c)\b([^>]*?)(\/?)>/g,(tag,name,attrs,slash)=>`<${name}${attrs.replace(/\s+s="[^"]*"/g,'')} s="1"${slash}>`);
  xml=xml.replace(header[0],styledHeader);
+ if(historyColumn){
+  xml=xml.replace(/<((?:[\w-]+:)?row)\b([^>]*)>([\s\S]*?)<\/\1>/g,(rowXml,rowTag,attrs,content)=>{
+   const rowNumber=Number(attrs.match(/\br="(\d+)"/)?.[1]);
+   const lines=historyLines[rowNumber-2]||0;
+   if(rowNumber<2||!lines)return rowXml;
+   const ref=historyColumn+rowNumber;
+   const cellPattern=new RegExp(`<((?:[\\w-]+:)?c)\\b([^>]*\\br="${ref}"[^>]*)(\\/?)>`);
+   const styled=content.replace(cellPattern,(cell,cellTag,cellAttrs,slash)=>`<${cellTag}${cellAttrs.replace(/\s+s="[^"]*"/g,'')} s="2"${slash}>`);
+   if(styled===content)return rowXml;
+   const height=Math.min(395,Math.max(28,lines*17+8));
+   return `<${rowTag}${attrs.replace(/\s+(?:ht|customHeight)="[^"]*"/g,'')} ht="${height}" customHeight="1">${styled}</${rowTag}>`;
+  });
+ }
  zip.file('xl/worksheets/sheet1.xml',xml);
  const styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
   +'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
@@ -622,8 +643,9 @@ async function styleActivityReportWorkbook(bytes){
   +'<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF351C4F"/><bgColor indexed="64"/></patternFill></fill></fills>'
   +'<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
   +'<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-  +'<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
-  +'<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf></cellXfs>'
+  +'<cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+  +'<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+  +'<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf></cellXfs>'
   +'<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles><dxfs count="0"/>'
   +'<tableStyles count="0" defaultTableStyle="TableStyleMedium9" defaultPivotStyle="PivotStyleLight16"/>'
   +'</styleSheet>';
@@ -641,7 +663,7 @@ async function styleActivityReportWorkbook(bytes){
 function openActivityReport(){
  document.getElementById('activityReportOverlay')?.remove();
  const acts=projectActivities(),p=project();
- const standard=[['ID VGR',a=>a.data.row?.['ID VGR']||''],['ID link',a=>a.data.ed?.idDedicado||a.data.row?.['ID DEDICADO']||''],['Nome da localidade',a=>a.data.row?.UNIDADE||a.data.row?.MUNICIPIO||''],['Nome do analista da atividade',a=>a.data.analystName||''],['Data',a=>{let d=activityDate(a)||'';return /^\d{4}-\d{2}-\d{2}$/.test(d)?d.split('-').reverse().join('/'):d}],['Status',a=>a.data.status||'Pendente'],['Observação',a=>a.data.observations||a.data.observacoes||a.data.observacao||''],['Horário de início',a=>formatReportDateTime(a.data.startAt)],['Horário de término',a=>formatReportDateTime(a.data.endAt)]];
+ const standard=[['ID VGR',a=>a.data.row?.['ID VGR']||''],['ID link',a=>a.data.ed?.idDedicado||a.data.row?.['ID DEDICADO']||''],['Nome da localidade',a=>a.data.row?.UNIDADE||a.data.row?.MUNICIPIO||''],['Nome do analista da atividade',a=>a.data.analystName||''],['Data',a=>{let d=activityDate(a)||'';return /^\d{4}-\d{2}-\d{2}$/.test(d)?d.split('-').reverse().join('/'):d}],['Status',a=>a.data.status||'Pendente'],['Observação',a=>a.data.observations||a.data.observacoes||a.data.observacao||''],['Horário de início',a=>formatReportDateTime(a.data.startAt)],['Horário de término',a=>formatReportDateTime(a.data.endAt)],['Histórico',formatReportHistory]];
  const keys=[...new Set([...(p?.data?.activityTemplate||[]),...(p?.data?.extraFields||[]).map(f=>typeof f==='string'?f:f.name),...acts.flatMap(a=>Object.keys(a.data.row||{}))])].filter(Boolean);
  const columns=[...standard,...keys.filter(k=>!standard.some(c=>c[0].toLocaleUpperCase('pt-BR')===k.toLocaleUpperCase('pt-BR'))).map(k=>[k,a=>a.data.row?.[k]??a.data.ed?.[k]??''])];
  const statuses=[...new Set(['Pendente',...activeStatuses,'Migrada','Quebra','Abandonada',...acts.map(a=>a.data.status).filter(Boolean)])];
@@ -649,7 +671,7 @@ function openActivityReport(){
   const preferenceKey='gi_report_prefs_'+(p?.id||'')+'_'+currentUser().trim().toLowerCase();
   let preferences={};try{preferences=JSON.parse(localStorage.getItem(preferenceKey)||'{}')||{}}catch(e){preferences={}}
  const overlay=document.createElement('div');overlay.id='activityReportOverlay';overlay.className='report-overlay';
- const group=(items,cls)=>`<div class="report-options ${cls}">${items.map((label,i)=>`<label><input type="checkbox" value="${i}" checked><span>${esc(label)}</span></label>`).join('')}</div>`;
+ const group=(items,cls)=>`<div class="report-options ${cls}">${items.map((label,i)=>`<label><input type="checkbox" value="${i}" ${cls==='report-fields'&&label==='Histórico'?'':'checked'}><span>${esc(label)}</span></label>`).join('')}</div>`;
  overlay.innerHTML=`<div class="report-dialog report-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="reportTitle"><div class="report-dialog-head"><h3 id="reportTitle">Extrair relatório</h3><button type="button" class="report-close" aria-label="Fechar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><p class="small muted">Escolha os campos e a origem das atividades. Suas opções ficam salvas neste navegador.</p><div class="report-date-filter"><label>Período <select id="reportPeriod"><option value="screen">Usar filtro da tela</option><option value="all">Todas as datas</option><option value="specific">Data específica</option></select></label><label class="report-date-picker" id="reportDatePicker">Selecionar data<input type="date" id="reportSelectedDate"></label><p class="report-screen-note small muted" id="reportScreenNote">O relatório seguirá exatamente a lista visível na tela, com pesquisa, status e analistas aplicados, na mesma ordem. Os filtros adicionais abaixo não serão usados.</p></div><div class="report-group"><div class="report-group-title"><b>Campos do projeto</b><label><input type="checkbox" class="report-toggle" data-target="report-fields" checked> Selecionar todos</label></div>${group(columns.map(c=>c[0]),'report-fields')}</div><div class="report-group report-optional-filter"><div class="report-group-title"><b>Status</b><label><input type="checkbox" class="report-toggle" data-target="report-statuses" checked> Selecionar todos</label></div>${group(statuses,'report-statuses')}</div><div class="report-group report-optional-filter"><div class="report-group-title"><b>Analistas</b><label><input type="checkbox" class="report-toggle" data-target="report-analysts" checked> Selecionar todos</label></div>${group([...analysts,'Sem analista'],'report-analysts')}</div><div class="report-dialog-actions"><label class="report-format-label">Formato <select id="reportFormat"><option value="xlsx">XLSX</option><option value="xls">XLS</option><option value="xlsm">XLSM</option><option value="csv">CSV</option></select></label><button type="button" class="secondary" id="cancelActivityReport">Cancelar</button><button type="button" id="downloadActivityReport">Baixar relatório</button></div><p class="small muted report-format-note">Cabeçalho roxo e fonte branca: XLSX e XLSM. XLS antigo e CSV não recebem cores.</p></div>`;
  document.body.appendChild(overlay);
   const rep=(cls,names)=>{const selected=preferences[cls];if(!Array.isArray(selected))return;overlay.querySelectorAll('.'+cls+' input').forEach((el,i)=>{el.checked=selected.includes(names[i])})};
@@ -701,8 +723,9 @@ function openActivityReport(){
    try{
     const wb=XLSX.utils.book_new(),sheet=XLSX.utils.aoa_to_sheet(matrix);
     sheet['!cols']=matrix[0].map((heading,i)=>{
-     const longest=matrix.reduce((max,row)=>Math.max(max,...String(row[i]??'').split(/\r?\n/).map(line=>Math.min(line.length,57))),0);
-     const longField=/observ|descri|endere|localidade|coment|detalh/i.test(heading);
+     const longest=matrix.reduce((max,row)=>Math.max(max,...String(row[i]??'').split(/\r?\n/).map(line=>Math.min(line.length,70))),0);
+     if(heading==='Histórico')return {wch:Math.min(74,Math.max(62,longest+5))};
+     const longField=/observ|descri|endere|localidade|coment|detalh|hist[oó]r/i.test(heading);
      return {wch:Math.min(60,Math.max(longField?30:15,longest+3))};
     });
     sheet['!rows']=[{hpt:28}];
@@ -710,7 +733,14 @@ function openActivityReport(){
     XLSX.utils.book_append_sheet(wb,sheet,'Atividades');
     const bookType=format==='xls'?'biff8':format==='xlsm'?'xlsm':'xlsx';
     const bytes=XLSX.write(wb,{bookType,type:'array',cellStyles:true});
-    const result=format==='xlsx'||format==='xlsm'?await styleActivityReportWorkbook(bytes):bytes;
+    const historyIndex=chosen.findIndex(c=>c[0]==='Histórico');
+    const historyColumn=historyIndex<0?'':XLSX.utils.encode_col(historyIndex);
+    const historyLines=historyIndex<0?[]:matrix.slice(1).map(row=>{
+     const value=row[historyIndex];
+     const charsPerLine=Math.max(25,Math.floor(sheet['!cols'][historyIndex].wch*.82));
+     return value?value.split('\n').reduce((count,line)=>count+Math.max(1,Math.ceil(line.length/charsPerLine)),0):0;
+    });
+    const result=format==='xlsx'||format==='xlsm'?await styleActivityReportWorkbook(bytes,historyColumn,historyLines):bytes;
     blob=new Blob([result],{type:'application/octet-stream'});
    }catch(err){console.error('Falha ao gerar relatório',err);return toast('Falha ao gerar planilha: '+err.message)}
    finally{button.disabled=false;button.textContent='Baixar relatório'}
