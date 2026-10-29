@@ -34,3 +34,10 @@ O arquivo original do Runbook é guardado em **IndexedDB** (armazenamento local 
 Os botões **X** nas importações permitem cancelar uma seleção sem apagar atividades. Na área de Runbook, quando não há nova seleção pendente e existe um modelo aplicado, o X permite removê-lo depois de uma confirmação. A planilha não é compartilhada com outros computadores e não há sincronização em nuvem.
 
 Para melhor funcionamento do armazenamento local, abra o sistema num endereço `http://localhost` (por exemplo: `python -m http.server 8000`) e continue utilizando o mesmo endereço e navegador. A abertura por `file://` pode ter limitações diferentes dependendo do navegador.
+
+
+## Atualização — listagem geral e edição administrativa
+
+- **Total geral**: mostra atividades de todos os status e todas as datas, com cartões contando o total por status. A lista fica em ordem decrescente da última movimentação e oferece **Mostrar mais atividades**.
+- **Painel do administrador → Configurar projeto → Editar atividade**: abre uma janela de busca em todas as atividades do projeto, com status, analista, tempo e data de conclusão, sem botões de adoção. É possível abrir o formulário da atividade, editar campos e status, e excluir após confirmação digitando o ID VGR. Runbooks vinculados são removidos junto com a atividade. A exclusão é registrada no Log.
+- Os dados continuam locais no navegador. Faça cópia/exportação dos dados antes de excluir atividades; a exclusão não pode ser desfeita.
