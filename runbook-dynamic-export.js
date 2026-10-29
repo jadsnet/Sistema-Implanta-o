@@ -17,15 +17,20 @@ function escapeXml(v){return String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot
 async function png(src){if(!src||!/^data:image\//.test(src))return null;let image=new Image();image.src=src;await new Promise((ok,no)=>{if(image.complete&&image.naturalWidth)return ok();image.onload=ok;image.onerror=no});const scale=Math.min(1,1400/Math.max(image.naturalWidth,image.naturalHeight));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);return {width:canvas.width,height:canvas.height,base64:canvas.toDataURL('image/png').split(',')[1]}}
 function pictureMarkup(pic,imageRid,section,item){
  const EMU=9525;
- const availableW=section.kind==='photos'?440:780;
- // Evita ultrapassar a faixa da próxima evidência.
- const next=item.nextRow||item.imageRow+12,rows=Math.max(1,next-item.imageRow);
- const availableH=Math.max(180,Math.min(section.kind==='photos'?440:540,item.imageHeight||rows*150));
+ // Medidas da região identificada no Excel, ao invés de tamanhos fixos por tipo.
+ // A escala é ÚNICA para os dois eixos: nunca deforma a imagem.
+ const cellW=Math.max(48,Number(item.imageWidth)|| (section.kind==='photos'?660:650));
+ const cellH=Math.max(48,Number(item.imageHeight)|| (section.kind==='photos'?350:400));
+ const margin=8,availableW=Math.max(24,cellW-margin*2),availableH=Math.max(24,cellH-margin*2);
  const factor=Math.min(availableW/pic.width,availableH/pic.height);
- const w=Math.round(factor*pic.width*EMU),h=Math.round(factor*pic.height*EMU);
- const leftCol=Math.max(0,Number(item.col)||0),row=Math.max(0,Number(item.imageRow||item.row+1)-1);
+ const pxW=Math.max(1,Math.round(factor*pic.width));
+ const pxH=Math.max(1,Math.round(factor*pic.height));
+ const x=Math.max(margin,Math.round((cellW-pxW)/2));
+ const y=Math.max(margin,Math.round((cellH-pxH)/2));
+ const leftCol=Math.max(0,Number(item.col)||0);
+ const row=Math.max(0,Number(item.imageRow||item.row+1)-1);
  const label=escapeXml(item.title).slice(0,100);
- return `<xdr:oneCellAnchor><xdr:from><xdr:col>${leftCol}</xdr:col><xdr:colOff>${8*EMU}</xdr:colOff><xdr:row>${row}</xdr:row><xdr:rowOff>${5*EMU}</xdr:rowOff></xdr:from><xdr:ext cx="${w}" cy="${h}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${pic.id}" name="${label}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="${imageRid}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
+ return `<xdr:oneCellAnchor><xdr:from><xdr:col>${leftCol}</xdr:col><xdr:colOff>${x*EMU}</xdr:colOff><xdr:row>${row}</xdr:row><xdr:rowOff>${y*EMU}</xdr:rowOff></xdr:from><xdr:ext cx="${pxW*EMU}" cy="${pxH*EMU}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${pic.id}" name="${label}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="${imageRid}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
 }
 async function exportRunbookImported(activity, images, projectData){
  if(!window.JSZip||!projectData?.runbookModel?.sections?.length)throw Error('Modelo de Runbook não disponível para este projeto.');

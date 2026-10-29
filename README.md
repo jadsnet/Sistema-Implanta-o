@@ -65,3 +65,26 @@ essas abas, confira o Excel gerado antes de distribuí-lo.
 No tema claro, os quadros internos de evidência têm um contraste levemente
 maior. O botão Limpar da Filtragem customizada está elevado alguns pixels para
 ficar centralizado no cartão, sem alterar seu tamanho.
+
+## Atualização: edição automática e Runbook com múltiplas colunas
+
+- O botão **Projetos** fica ao lado do título do projeto, com ícone de saída.
+- O editor visual do Runbook usa lixeiras discretas e salva as alterações de
+  títulos e descrições ao sair dos campos (mensagem de 3 segundos no rodapé).
+- A leitura de modelos agora reconhece evidências simultâneas em colunas
+  diferentes, instruções complementares com área de print e pares de fotos
+  antes/depois. O parser ignora tabelas que não são áreas de imagens.
+- Cada imagem é ajustada proporcionalmente à largura da coluna e à altura
+  disponível até a próxima evidência; não é esticada para preencher a célula.
+- Prints salvos pelo Runbook são persistidos localmente no IndexedDB, evitando
+  esgotar o limite pequeno de localStorage ao trabalhar com muitos prints.
+
+**Projetos com modelos importados em versões anteriores:** reimporte a planilha
+no painel do administrador e confirme a prévia para reconstruir áreas que não
+eram detectadas. As imagens são associadas aos IDs dos campos quando disponíveis,
+mas confira os links e os prints após mudar a estrutura do modelo.
+
+**Testes:** com `Runbook_Rest_Arcos_MIGRA_TEMP_v1.1.xlsx` a leitura identificou
+18 áreas em `Log_Before`, 19 em `Log_After` e 15 em `Relatorio Fotografico`.
+Testes de exportação incluíram imagens em colunas paralelas e uma aba criada
+no editor; os arquivos gerados foram reabertos como planilhas Excel.

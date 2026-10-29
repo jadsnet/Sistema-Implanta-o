@@ -50,7 +50,7 @@ async function prepare({zip,model,workbookDoc,wbRelsDoc,contentsDoc,sheetMap,par
    const sheet=workbookDoc.createElementNS(main,'sheet');sheet.setAttribute('name',sheetName);sheet.setAttribute('sheetId',String(sheetId));sheet.setAttributeNS(relDoc,'r:id',rid);sheets.appendChild(sheet);
    const relation=wbRelsDoc.createElementNS(rels,'Relationship');relation.setAttribute('Id',rid);relation.setAttribute('Type','http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet');relation.setAttribute('Target','worksheets/sheet'+number+'.xml');wbRelsDoc.documentElement.appendChild(relation);
    const over=contentsDoc.createElementNS(contentNs,'Override');over.setAttribute('PartName','/'+path);over.setAttribute('ContentType','application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml');contentsDoc.documentElement.appendChild(over);
-   const doc=parse(`<worksheet xmlns="${main}"><sheetData/></worksheet>`);sheetMap.set(sheetName,path);docs.set(sheetName,doc);
+   const doc=parse(`<worksheet xmlns="${main}"><cols><col min="1" max="1" width="94" customWidth="1"/></cols><sheetData/></worksheet>`);sheetMap.set(sheetName,path);docs.set(sheetName,doc);
    section.sheetName=sheetName;section.titleRow=1;section.titleCol=0;
   }
   const doc=await readSheet(sheetName);if(!doc)continue;
@@ -64,7 +64,7 @@ async function prepare({zip,model,workbookDoc,wbRelsDoc,contentsDoc,sheetMap,par
    setCell(doc,rowNo,Number(column)||0,section.title);
   }
   for(const item of section.items){
-   if(item.createdByEditor||!item.row){const row=Math.max(3,lastRow(doc)+3);item.row=row;item.col=0;item.descriptionRow=row+1;item.imageRow=row+2;item.imageHeight=460;item.nextRow=row+13;item.sheetName=sheetName}
+   if(item.createdByEditor||!item.row){const row=Math.max(3,lastRow(doc)+3);item.row=row;item.col=0;item.descriptionRow=row+1;item.imageRow=row+2;item.imageWidth=645;item.imageHeight=420;item.nextRow=row+3;item.sheetName=sheetName;const imageRow=getRow(doc,item.imageRow);imageRow.setAttribute('ht','315');imageRow.setAttribute('customHeight','1')}
    if(!item.sheetName)item.sheetName=sheetName;
    setCell(doc,Number(item.row),Number(item.col)||0,item.title);
    if(item.descriptionRow || item.description){const descRow=Number(item.descriptionRow)||Number(item.row)+1;item.descriptionRow=descRow;setCell(doc,descRow,Number(item.col)||0,item.description||'');if(item.imageRow<=descRow)item.imageRow=descRow+1}
