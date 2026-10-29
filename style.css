@@ -1299,3 +1299,106 @@ html[data-theme="light"] .admin-activity-dialog,html[data-theme="light"] .admin-
 html[data-theme="light"] .admin-activity-header p{color:#f1e4fa}
 html[data-theme="light"] .admin-activity-search{background:#6b4b83;color:#fff}
 @media(max-width:780px){.admin-activity-dialog{padding:12px 10px 18px;max-height:97vh;width:99vw}.admin-activity-overlay{padding:4px}.admin-activity-results .activity-line{flex-wrap:wrap}.admin-activity-results .activity-main{flex-basis:100%!important}.admin-activity-results .activity-meta{flex:1}.admin-activity-content{padding:3px}}
+
+/* v1.1 — refinamentos visuais e funcionais pedidos para a gestão de projetos */
+/* Editor de atividades separado do cadastro, usando a cor primária do sistema. */
+.config-builder .admin-edit-action{display:flex;align-items:center;justify-content:flex-start;margin-top:15px;min-height:38px}
+.config-builder .admin-edit-action .admin-edit-trigger{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:#7917c7!important;color:#fff!important;border:0!important;border-radius:9px;
+  padding:10px 14px;min-height:36px;box-shadow:3px 5px 12px rgba(25,8,42,.29)!important;
+  cursor:pointer;font-weight:600
+}
+.config-builder .admin-edit-action .admin-edit-trigger:hover{background:#9220df!important;filter:brightness(1.05)}
+.config-builder .admin-edit-action .admin-edit-trigger svg{display:block;flex:none}
+/* O botão de fechar do relatório segue a mesma tonalidade do cadastro. */
+.report-dialog .report-close,.report-dialog-wide .report-close{
+  background:#7917c7!important;border:0!important;border-radius:10px!important;
+  width:37px!important;height:37px!important;min-width:37px!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  padding:0!important;color:#fff!important;line-height:0!important;
+  box-shadow:3px 5px 12px rgba(25,8,42,.3)!important
+}
+.report-dialog .report-close:hover{background:#9220df!important}
+.report-dialog .report-close svg{display:block!important;transform:none!important}
+/* Foto do projeto: clicar na imagem para ajustar o enquadramento; X para apagar. */
+.profile-config-preview[role="button"]{cursor:pointer;transition:box-shadow .15s,transform .15s}
+.profile-config-preview[role="button"]:hover{box-shadow:0 0 0 3px rgba(169,83,230,.6);transform:translateY(-1px)}
+.profile-config-preview[role="button"]:focus-visible{outline:3px solid #a350ed;outline-offset:3px}
+.profile-config-buttons .project-photo-remove{
+  width:38px;height:38px;min-width:38px;flex:0 0 38px;padding:0!important;
+  display:inline-flex;align-items:center;justify-content:center;
+  color:white!important;background:#7917c7!important;border:0!important;border-radius:10px!important;
+  box-shadow:3px 5px 12px rgba(25,8,42,.3)!important;cursor:pointer
+}
+.profile-config-buttons .project-photo-remove:hover:not(:disabled){background:#9220df!important}
+.profile-config-buttons .project-photo-remove:disabled{opacity:.42;cursor:not-allowed}
+.profile-config-buttons .project-photo-remove svg{display:block;flex:none}
+/* Runbook: duas colunas independentes em cada seção, sem misturar evidências de outras abas. */
+.runbook-detail .evidence-section .evidence-stack.evidence-grid-two{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  column-gap:18px!important;row-gap:18px!important;align-items:stretch
+}
+.runbook-detail .evidence-grid-two .evidence-card{min-width:0;display:flex;flex-direction:column}
+.runbook-detail .evidence-grid-two .evidence-card .evidence-drop{flex:1;min-width:0}
+@media(max-width:840px){.runbook-detail .evidence-section .evidence-stack.evidence-grid-two{grid-template-columns:1fr!important}}
+/* Projetos no painel administrativo: cartões menores com grade de três colunas. */
+#adminBody .admin-project-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px 28px;margin:20px 0 28px}
+#adminBody .admin-project-grid .project-row{
+  margin:0!important;min-width:0;min-height:78px;padding:12px 14px!important;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  box-shadow:5px 9px 18px rgba(20,7,37,.23)!important;
+  border:0!important;border-radius:12px!important
+}
+#adminBody .admin-project-grid .project-row>div{min-width:0;overflow:hidden}
+#adminBody .admin-project-grid .project-row b{overflow-wrap:anywhere}
+#adminBody .admin-project-grid .project-row button{flex:none;min-height:34px;padding:7px 10px}
+@media(max-width:950px){#adminBody .admin-project-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}}
+@media(max-width:580px){#adminBody .admin-project-grid{grid-template-columns:1fr}}
+/* Cronômetro longo: data de início e tempo transcorrido juntos, sem cortar a informação. */
+.activity-line .activity-meta{grid-template-columns:120px minmax(94px,max-content) minmax(0,1fr);}
+.activity-line .elapsed{font-variant-numeric:tabular-nums;font-size:11px;white-space:nowrap}
+.activity-line:has(.elapsed[data-start]) .activity-meta{overflow:visible}
+@media(max-width:1200px){.activity-line .activity-meta{grid-template-columns:0 minmax(88px,max-content) minmax(0,1fr)}}
+@media(max-width:850px){.activity-line .activity-meta{grid-template-columns:0 minmax(88px,max-content) minmax(0,1fr)}}
+/* Relatório: seletor independente de data, mantendo opções lembradas por projeto e usuário. */
+.report-date-filter{display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin:12px 0 18px;padding:12px 14px;border-radius:11px;background:rgba(123,84,156,.20)}
+.report-date-filter label{display:flex;flex-direction:column;gap:7px;min-width:180px;font-size:12px;font-weight:600}
+.report-date-filter select,.report-date-filter input{height:36px;padding:6px 9px;min-width:165px}
+.report-date-filter [hidden]{display:none!important}
+html[data-theme="light"] .report-date-filter{background:rgba(234,215,247,.13)}
+/* Filtragem customizada: mantém as dimensões externas, mas utiliza melhor a área interna. */
+.stats>.custom-filter-card{display:flex;flex-direction:column;justify-content:center!important;padding:6px 12px!important}
+.stats>.custom-filter-card h3{margin:0 0 5px!important;min-height:15px;line-height:1.25!important}
+.stats>.custom-filter-card .custom-filter-fields{
+  display:grid!important;grid-template-columns:minmax(0,1fr) 72px!important;
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  column-gap:10px!important;row-gap:5px!important;max-width:100%!important;align-items:center!important
+}
+.stats>.custom-filter-card .custom-filter-fields label{
+  grid-column:1!important;grid-template-columns:54px minmax(0,1fr)!important;
+  align-items:center!important;gap:6px!important;margin:0!important;line-height:1.15!important;
+  min-height:26px!important
+}
+.stats>.custom-filter-card .custom-filter-fields input,
+.stats>.custom-filter-card .custom-filter-fields select{min-width:0!important;width:100%!important;height:27px!important;min-height:27px!important;margin:0!important}
+.stats>.custom-filter-card .custom-filter-fields #clearCustomFilter{
+  grid-column:2!important;grid-row:1 / span 2!important;align-self:center!important;
+  justify-self:stretch!important;display:flex;align-items:center;justify-content:center;
+  width:100%!important;min-width:0!important;height:30px!important;min-height:30px!important;margin:0!important;
+  padding:5px!important;white-space:nowrap
+}
+@media(max-width:520px){.stats>.custom-filter-card{padding:9px 11px!important}}
+/* Reserva espaço para data + tempo quando uma atividade ultrapassa 24 horas. */
+@media(min-width:1201px){
+ .activity-line{grid-template-columns:minmax(0,1fr) 405px 128px 112px}
+ .activity-line .activity-meta{grid-template-columns:120px 175px minmax(0,1fr)}
+}
+@media(min-width:851px) and (max-width:1200px){
+ .activity-line{grid-template-columns:minmax(0,1fr) 282px 116px 105px}
+ .activity-line .activity-meta{grid-template-columns:0 minmax(0,1fr) 82px}
+ .activity-line .elapsed{white-space:normal;line-height:1.25}
+}
+@media(max-width:850px){
+ .activity-line .elapsed{white-space:normal;line-height:1.25}
+}
