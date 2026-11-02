@@ -1,5 +1,7 @@
 # Gestão de Implantação
 
+> **Versão Supabase:** o login `admin/admin`, a seleção local de usuários e a persistência principal em `localStorage` foram removidos. Antes de usar ou publicar, siga o passo a passo **[GUIA_SUPABASE_GITHUB_PAGES.md](GUIA_SUPABASE_GITHUB_PAGES.md)**. As instruções históricas abaixo descrevem características da versão anterior e não devem ser usadas para configurar autenticação ou armazenamento.
+
 Aplicação web estática com os arquivos separados:
 - `index.html`: estrutura da interface.
 - `style.css`: tema, cartões, linhas de atividade e layout responsivo.

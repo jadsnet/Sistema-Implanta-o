@@ -93,8 +93,9 @@ function buildModel(workbook){const sections=[];for(const name of workbook.Sheet
 }
 async function read(file){
  if(!file)throw Error('Escolha uma planilha de Runbook.');
+ if(typeof window.validateUpload==='function')await window.validateUpload(file,'runbook');
  if(!window.XLSX)throw Error('A biblioteca de leitura de planilhas não foi carregada.');
- let input=await file.arrayBuffer();const wb=XLSX.read(input,{type:'array',cellStyles:true,cellText:true});
+ let input=await file.arrayBuffer();const wb=XLSX.read(input,{type:'array',cellStyles:true,cellText:true,sheetRows:1500});
  const model=buildModel(wb);
  if(!model.total)throw Error('Não encontrei regiões destinadas a evidências/fotografias na planilha.');
  const ext=(file.name.split('.').pop()||'').toLowerCase();

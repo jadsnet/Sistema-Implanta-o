@@ -19,7 +19,7 @@ function toast(s, duration=5000){
  t.style.display=saved?'flex':'block';t.classList.add('toast-visible');
  toastTimer=setTimeout(()=>{t.classList.remove('toast-visible','toast-with-icon');t.style.display='none'},duration);
 }
-function save(){localStorage.setItem('gestaoImplantacaoDB',JSON.stringify(DB))}
+function save(){if(!window.GICloud?.role())throw Error('Sem sessão Supabase autorizada');window.GICloud.queueSave(DB)}
 // Notificação discreta depois que o usuário abandona um campo editado.
 // Campos de pesquisa, filtros e formulários não enviados não são salvos antecipadamente.
 document.addEventListener('focusin',event=>{
@@ -36,7 +36,7 @@ document.addEventListener('focusout',event=>{
  if(/^(?:search|rbSearch|customAnalyst|customStatus|otherDate|logSearch|login)/i.test(el.id||''))return;
  const activeContext=el.closest('.runbook-editor-window,.activity-detail-screen,.admin-config-section,.runbook-detail,.activity-modal,.admin-activity-editor');
  if(!activeContext)return;
- setTimeout(()=>toast('Alterações salvas ✅',3000),0);
+ // O aviso de sucesso é exibido APENAS depois que o banco confirma a gravação.
 },true);
 
 function log(action,detail='',actId=''){DB.log.unshift({id:'log_'+Date.now(),data:{act:action,action,detail,actId,ts:new Date().toISOString(),user:localStorage.getItem('gi_user')||'Administrador'}});save()}
@@ -46,15 +46,56 @@ function activityName(a){let r=a.data.row||{};return r['ID VGR']||r['ID']||a.id}
 function projectActivities(){let p=project();return arr('activities').filter(a=>{let r=a.data.row||{};return !p||!p.data.name||String(r.EMPRESA||'').toLowerCase()===String(p.data.name).toLowerCase()||a.data.projectId===p.id})}
 function render(){document.querySelectorAll('.nav').forEach(a=>{const u=new URL(location.href);u.searchParams.set('page',a.dataset.page);if(projectId)u.searchParams.set('project',projectId);else u.searchParams.delete('project');a.href=u.toString()});if(page==='admin'&&!isAdmin())page='home';document.querySelector('.nav[data-page="admin"]').style.display=isAdmin()?'':'none';renderProjectAvatar();document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.page===page));$('#sectionEyebrow').textContent=page==='home'?'PROJETOS':page==='runbook'?'RUNBOOK':page==='logs'?'AUDITORIA':'ADMINISTRAÇÃO';$('#watermark').textContent=project()?('PROJETO '+getName(project()).toUpperCase()):'';$('#pageTitle').textContent=page==='home'?(project()?'Projeto '+getName(project()):'Selecione um projeto'):page==='runbook'?'Realizar runbook':page==='logs'?'Log de atividades':'Painel do administrador';renderUserPicker();const back=$('#topBackProjects');if(back){back.hidden=!(page==='home'&&!!project()&&!selectedActivity);back.onclick=()=>{projectId=null;selectedActivity=null;filterStatus='Todos';filterOwner='none';render()}}if(page==='home')renderHome();if(page==='runbook')renderRunbook();if(page==='logs')renderLogs();if(page==='admin')renderAdmin()}
 function renderProjectAvatar(){let host=$('#projectSidebarProfile');if(!host)return;let p=project();host.hidden=!p;if(!p){host.innerHTML='';return}let photo=p.data?.profilePhoto;host.innerHTML=`<div class="project-profile-image">${photo?`<img src="${esc(photo)}" alt="Foto do projeto">`:`<span>${esc(getName(p).slice(0,1).toUpperCase())}</span>`}</div><div class="project-profile-name" title="Projeto ${esc(getName(p))}"><strong>Projeto ${esc(getName(p))}</strong><small>Gestão de Projetos</small></div>`}
-function currentUser(){return localStorage.getItem('gi_user')||'Usuário'}
-function isAdmin(){return sessionStorage.getItem('gi_admin')==='yes' && currentUser()==='Administrador'}
+function currentUser(){return window.GICloud?.displayName()||'Usuário'}
+function isAdmin(){return ['administrador','gestor'].includes(window.GICloud?.role())}
+function isRootAdmin(){return window.GICloud?.role()==='administrador'}
 function firstName(name){return String(name||'').trim().split(/\s+/)[0]||'Usuário'}
-function renderUserPicker(){let host=$('#currentUser');if(!host)return;host.innerHTML=`<span class="signed-user">${esc(currentUser())}</span><button class="secondary logout-button" id="logoutButton">Sair</button>`;$('#logoutButton').onclick=()=>{sessionStorage.removeItem('gi_authenticated');sessionStorage.removeItem('gi_admin');localStorage.removeItem('gi_user');showLogin()}}
-async function passwordHash(password,salt){const bytes=new TextEncoder().encode(salt+':'+password);const digest=await crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('')}
-function newPassword(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#';const bytes=new Uint8Array(14);crypto.getRandomValues(bytes);return Array.from(bytes,b=>chars[b%chars.length]).join('')}
-async function assignPassword(user){const password=newPassword();user.data.salt=Array.from(crypto.getRandomValues(new Uint8Array(16)),x=>x.toString(16).padStart(2,'0')).join('');user.data.passwordHash=await passwordHash(password,user.data.salt);save();return password}
-function showIssuedPassword(email,password){const layer=document.createElement('div');layer.className='credential-overlay';layer.innerHTML=`<div class="credential-card"><h2>Senha temporária criada</h2><p>Usuário: <b>${esc(email)}</b></p><p>Como o sistema está funcionando apenas localmente, a senha não foi enviada por e-mail. Copie e entregue ao usuário por um canal seguro.</p><div class="issued-password">${esc(password)}</div><div class="credential-buttons"><button id="copyIssued">Copiar senha</button><button class="secondary" id="closeIssued">Fechar</button></div></div>`;document.body.appendChild(layer);layer.querySelector('#copyIssued').onclick=()=>navigator.clipboard.writeText(password).then(()=>toast('Senha copiada'));layer.querySelector('#closeIssued').onclick=()=>layer.remove()}
-function showLogin(){document.querySelector('.app').style.display='none';document.querySelector('.login-overlay')?.remove();const layer=document.createElement('div');layer.className='login-overlay';layer.innerHTML=`<form class="login-card" id="loginForm"><div class="login-brand"><span class="login-brand-icon" aria-hidden="true"></span><span><b>Gestão de Projetos</b></span></div><h1>Entrar</h1><p>Faça login para acessar o sistema neste navegador.</p><label for="loginEmail">Usuário ou e-mail</label><input id="loginEmail" autocomplete="username" required placeholder="Seu e-mail"><label for="loginPassword">Senha</label><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Digite sua senha"><div class="login-error" id="loginError" role="alert"></div><button type="submit" class="login-submit">Entrar</button><div class="login-footer"><button type="button" class="login-theme-switch" aria-label="Alternar tema claro e escuro" title="Alternar tema">☀ <span>☾</span></button><small>V.1.0</small></div></form>`;document.body.appendChild(layer);layer.querySelector('.login-theme-switch').onclick=()=>{const mode=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=mode;localStorage.setItem('gi_theme',mode)};layer.querySelector('form').onsubmit=async e=>{e.preventDefault();let login=$('#loginEmail').value.trim(),pass=$('#loginPassword').value;if(!login||!pass.trim()){$('#loginError').textContent='Informe um usuário e uma senha.';return}const adminLogin=login.toLowerCase()==='admin'&&pass==='admin';const name=adminLogin?'Administrador':login;sessionStorage.setItem('gi_authenticated','yes');sessionStorage.setItem('gi_admin',adminLogin?'yes':'no');localStorage.setItem('gi_user',name);layer.remove();document.querySelector('.app').style.display='flex';if(!adminLogin&&page==='admin')page='home';render()}}
+function renderUserPicker(){let host=$('#currentUser');if(!host)return;host.innerHTML=`<span class="signed-user">${esc(currentUser())}</span><button class="secondary gi-refresh-button" id="refreshCloudData" title="Atualizar dados do Supabase">↻ Atualizar dados</button><button class="secondary logout-button" id="logoutButton">Sair</button>`;
+ $('#refreshCloudData').onclick=async()=>{const button=$('#refreshCloudData');button.disabled=true;
+  try{await GICloud.waitForSaves();DB=await GICloud.loadAll();render();toast('Dados atualizados do Supabase')}
+  catch(e){toast('Não foi possível atualizar: '+e.message,8000)}finally{button.disabled=false}
+ };
+ $('#logoutButton').onclick=async()=>{try{await GICloud.signOut();DB={projects:[],activities:[],runbooks:[],users:[],analysts:[],log:[]};showLogin()}catch(e){toast('Falha ao sair: '+e.message)}};
+}
+async function giEnterApp(){
+ const p=await GICloud.getProfile();
+ if(!p){showLogin();return}
+ if(!p.active)throw Error('Sua conta ainda não foi ativada pelo administrador.');
+ if(p.must_change_password){giOpenPasswordRecovery(true);return}
+ DB=await GICloud.loadAll();
+ // Nunca sobrescrever nem apagar dados locais anteriores sem migração autorizada.
+ const requestedProject=new URLSearchParams(location.search).get('project');
+ if(requestedProject&&arr('projects').some(p=>p.id===requestedProject))projectId=requestedProject;
+ document.querySelector('.login-overlay')?.remove();
+ document.querySelector('.app').style.display='flex';
+ if(!isAdmin()&&page==='admin')page='home';
+ render();
+}
+function giOpenPasswordRecovery(required=false){
+ document.querySelector('.app').style.display='none';document.querySelector('.login-overlay')?.remove();
+ const layer=document.createElement('div');layer.className='login-overlay';
+ layer.innerHTML=`<form class="login-card" id="changePasswordForm"><div class="login-brand"><span class="login-brand-icon"></span><span><b>Gestão de Projetos</b></span></div><h1>${required?'Primeiro acesso':'Redefinir senha'}</h1><p>Crie uma senha com pelo menos 12 caracteres, maiúscula, minúscula e número.</p><label for="newAccountPassword">Nova senha</label><input id="newAccountPassword" type="password" autocomplete="new-password" minlength="12" required><label for="repeatAccountPassword">Confirmar senha</label><input id="repeatAccountPassword" type="password" autocomplete="new-password" minlength="12" required><div class="login-error" id="changeError" role="alert"></div><button type="submit" class="login-submit">Salvar nova senha</button>${required?'':'<button type="button" class="secondary" id="cancelReset">Voltar</button>'}</form>`;
+ document.body.appendChild(layer);
+ layer.querySelector('#cancelReset')?.addEventListener('click',()=>showLogin());
+ layer.querySelector('form').onsubmit=async event=>{event.preventDefault();const a=$('#newAccountPassword').value,b=$('#repeatAccountPassword').value;
+   if(a!==b){$('#changeError').textContent='As senhas são diferentes.';return}
+   try{await GICloud.changePassword(a);await giEnterApp()}catch(e){$('#changeError').textContent=e.message}
+ };
+}
+window.giOpenPasswordRecovery=giOpenPasswordRecovery;
+function showLogin(message=''){
+ document.querySelector('.app').style.display='none';document.querySelector('.login-overlay')?.remove();
+ const layer=document.createElement('div');layer.className='login-overlay';
+ layer.innerHTML=`<form class="login-card" id="loginForm"><div class="login-brand"><span class="login-brand-icon" aria-hidden="true"></span><span><b>Gestão de Projetos</b></span></div><h1>Entrar</h1><p>Use seu e-mail corporativo @telefonica.com.</p><label for="loginEmail">E-mail corporativo</label><input id="loginEmail" type="email" autocomplete="username" required placeholder="nome@telefonica.com"><label for="loginPassword">Senha</label><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Digite sua senha"><div class="login-error" id="loginError" role="alert">${esc(message)}</div><button type="submit" class="login-submit">Entrar</button><button type="button" id="forgotPassword" class="secondary">Esqueci minha senha</button><div class="login-footer"><button type="button" class="login-theme-switch" aria-label="Alternar tema claro e escuro" title="Alternar tema">☀ <span>☾</span></button><small>V.1.0</small></div></form>`;
+ document.body.appendChild(layer);
+ layer.querySelector('.login-theme-switch').onclick=()=>{const mode=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=mode;localStorage.setItem('gi_theme',mode)};
+ layer.querySelector('#forgotPassword').onclick=async()=>{const email=$('#loginEmail').value;try{await GICloud.resetPassword(email);$('#loginError').textContent='Se a conta existir, enviaremos um link de redefinição para o e-mail.'}catch(e){$('#loginError').textContent=e.message}};
+ layer.querySelector('form').onsubmit=async event=>{event.preventDefault();const button=layer.querySelector('.login-submit');button.disabled=true;$('#loginError').textContent='';
+   try{await GICloud.signIn($('#loginEmail').value,$('#loginPassword').value);await giEnterApp()}
+   catch(e){$('#loginError').textContent=e.message}
+   finally{button.disabled=false}
+ };
+}
 
 function localDay(value){if(!value)return '';const d=new Date(value);if(Number.isNaN(d.getTime()))return String(value).slice(0,10);return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}
 function activityDate(a){const d=a.data||{},r=d.row||{};return localDay(d.startAt||d.endAt||r.DATA||r.Data||r.DATA_ATIVIDADE||r['DATA DA ATIVIDADE']||r['DATA DE ABERTURA']||r['DATA CRIAÇÃO']||'')}
@@ -88,7 +129,7 @@ function completionLabel(a){const d=a.data||{},st=normStatus(d.status);if(!['Mig
 const funnelIcon='<svg class="date-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>';
 function recordActivityHistory(a,status,notes){if(!a||!['Migrada','Quebra','Abandonada'].includes(status))return;const d=a.data;d.history=d.history||[];d.history.push({at:new Date().toISOString(),analyst:currentUser(),status:status||d.status||'Pendente',notes:String(notes||'')});save()}
 function renderHome(){let c=$('#appContent');if(!project()){c.innerHTML=`<div class="panel project-selection-panel"><h3>Selecione um projeto</h3><div class="grid project-selection-grid">${arr('projects').map(p=>`<div class="project" data-project="${esc(p.id)}"><div class="letter">${p.data?.profilePhoto?`<img src="${esc(p.data.profilePhoto)}" alt="Foto de ${esc(getName(p))}">`:esc(getName(p).slice(0,1))}</div><div class="project-selection-info"><b>${esc(getName(p))}</b><div class="sub small">${arr('activities').filter(a=>String((a.data.row||{}).EMPRESA||'').toLowerCase()===getName(p).toLowerCase()).length} atividades</div></div></div>`).join('')}</div></div>`;c.querySelectorAll('[data-project]').forEach(el=>el.onclick=()=>{projectId=el.dataset.project;selectedActivity=null;render()});return}if(selectedActivity){c.innerHTML=activityDetail(selectedActivity,detailMode);wireDetail();return}let acts=dateActivities(projectActivities());let counts=Object.fromEntries(statuses.map(s=>[s,acts.filter(a=>normStatus(a.data.status)===s).length]));c.innerHTML=`<div class="home-filters"><div class="date-buttons"><button class="${dateFilter==='today'?'active':''}" data-datefilter="today">Hoje</button><button class="${dateFilter==='other'?'active':''}" data-datefilter="other">Outro dia</button><button class="${dateFilter==='all'?'active':''}" data-datefilter="all">Total geral</button>${dateFilter==='other'?funnelIcon:''}<input type="date" id="otherDate" value="${esc(selectedDate)}" class="${dateFilter==='other'?'':'hidden'}" aria-label="Escolher data"></div></div><div class="stats">${statuses.map(s=>`<button type="button" class="stat stat-clickable ${filterOwner==='status'&&filterStatus===s?'selected':''}" data-statusfilter="${esc(s)}" aria-pressed="${filterOwner==='status'&&filterStatus===s}">${filterOwner==='status'&&filterStatus===s?`<svg class="stat-filter-watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>`:""}<div class="stat-emoji">${({'Pendente':'⏳','Em andamento':'📋','Migrada':'✅','Quebra':'⚠️'})[s] ? (()=>{const ic=({'Pendente':'⏳','Em andamento':'📋','Migrada':'✅','Quebra':'⚠️'})[s];return `<span class="e s" aria-hidden="true">${ic}</span><span class="e h" aria-hidden="true">${ic}</span><span class="fc" aria-hidden="true"><span class="e f">${ic}</span></span><span class="e d" aria-hidden="true">${ic}</span><span class="gl" aria-hidden="true"></span>`})() : ''}</div><span>${s==='Migrada'?'Migradas':s==='Pendente'?'Pendentes (projeto)':s==='Quebra'?'Quebradas':s}</span><b>${counts[s]}</b></button>`).join('')}<section class="custom-filter-card ${filterOwner==='custom' ? 'selected' : ''}"><h3>🔎 Filtragem customizada ${filterOwner==='custom'?`<svg class="custom-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>`:""}</h3><div class="custom-filter-fields"><label>Analista<input id="customAnalyst" list="customAnalystNames" placeholder="Todos os analistas" value="${esc(customAnalyst)}"><datalist id="customAnalystNames">${[...new Set(projectActivities().map(a=>a.data.analystName).filter(Boolean))].sort().map(n=>`<option value="${esc(n)}"></option>`).join('')}</datalist></label><label>Status<select id="customStatus">${[['Todos','Todos os status'],['Pendente','Pendente'],['Em andamento','Em andamento'],['Contatando técnico','Contatando técnico'],['Iniciando configuração','Iniciando configuração'],['Finalizando configuração','Finalizando configuração'],['Aguardando cliente config Fortinet','Aguardando cliente config Fortinet'],['Organização de Rack e equipamentos','Organização de Rack e equipamentos'],['Migrada','Migradas'],['Quebra','Quebradas']].map(([v,t])=>`<option value="${esc(v)}" ${customStatus===v?'selected':''}>${t}</option>`).join('')}</select></label><button id="clearCustomFilter" class="secondary" type="button">Limpar</button></div><div class="small muted" id="customFilterCount"></div></section></div><div class="substats"><span>Contatando técnico: <b>${acts.filter(a=>a.data.status==='Contatando técnico').length}</b></span><span>Iniciando configuração: <b>${acts.filter(a=>a.data.status==='Iniciando configuração').length}</b></span><span>Finalizando configuração: <b>${acts.filter(a=>a.data.status==='Finalizando configuração').length}</b></span></div><section class="search-section"><div class="report-search-heading"><h3>Buscar atividade</h3><button type="button" class="report-trigger" id="openActivityReport" title="Escolher colunas e exportar relatório"><svg class="report-sheet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.5h10l4 4V21H5z"/><path d="M15 2.5V7h4M8 11h8M8 15h8M11 9v10"/></svg><span>Extrair relatório</span></button></div><input id="searchActivity" value="${esc(localStorage.getItem('gi_search_'+(projectId||''))||'')}" placeholder="Buscar por ID, ID do link ou ID do VGR" style="width:100%;margin-bottom:12px"><div class="small muted" id="activityHint">Minhas atividades em andamento:</div><div id="activityList"></div></section>`;c.querySelectorAll('[data-datefilter]').forEach(b=>b.onclick=()=>{dateFilter=b.dataset.datefilter;filterOwner='none';filterStatus='Todos';customAnalyst='';customStatus='Todos';localStorage.removeItem('gi_search_'+(projectId||''));render()});$('#otherDate').onchange=e=>{selectedDate=e.target.value||new Date().toISOString().slice(0,10);dateFilter='other';filterOwner='none';filterStatus='Todos';customAnalyst='';customStatus='Todos';localStorage.removeItem('gi_search_'+(projectId||''));render()};c.querySelectorAll('[data-statusfilter]').forEach(b=>b.onclick=()=>{filterStatus=filterOwner==='status'&&filterStatus===b.dataset.statusfilter?'Todos':b.dataset.statusfilter;filterOwner=filterStatus==='Todos'?'none':'status';customAnalyst='';customStatus='Todos';localStorage.removeItem('gi_search_'+(projectId||''));render()});$('#customAnalyst').oninput=()=>{customAnalyst=$('#customAnalyst').value.trim();filterStatus='Todos';filterOwner=(customAnalyst||customStatus!=='Todos')?'custom':'none';updateFilterIndicators();renderActivityList()};$('#customStatus').onchange=()=>{customStatus=$('#customStatus').value;filterStatus='Todos';filterOwner=(customAnalyst||customStatus!=='Todos')?'custom':'none';updateFilterIndicators();renderActivityList()};$('#clearCustomFilter').onclick=()=>{customAnalyst='';customStatus='Todos';$('#customAnalyst').value='';$('#customStatus').value='Todos';filterOwner='none';updateFilterIndicators();renderActivityList()};$('#openActivityReport').onclick=openActivityReport;$('#searchActivity').oninput=()=>{localStorage.setItem('gi_search_'+(projectId||''),$('#searchActivity').value);renderActivityList()};renderActivityList()}function elapsed(start){if(!start)return '';let sec=Math.max(0,Math.floor((Date.now()-new Date(start).getTime())/1000));if(!Number.isFinite(sec))return '';let h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),ss=sec%60;const time=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;return h>=24?`${new Date(start).toLocaleDateString('pt-BR')} · ${time}`:time} 
-function adoptActivity(id){let a=arr('activities').find(x=>x.id===id);if(!a)return;let d=a.data;if(d.analystName&&d.analystName!==currentUser()&&!d.endAt){toast('Atividade já adotada por '+firstName(d.analystName));return}if(project()?.data)project().data.setupOpen=false;d.analystName=currentUser();d.analystId=currentUser();d.status='Contatando técnico';d.startAt=d.startAt||new Date().toISOString();d.endAt=null;recordActivityHistory(a,d.status,'Atividade adotada');log('Atividade adotada',activityName(a),a.id);save();toast('Atividade adotada por '+firstName(currentUser()));selectedActivity=id;detailMode='view';render()}
+function adoptActivity(id){let a=arr('activities').find(x=>x.id===id);if(!a)return;let d=a.data;if(d.analystName&&d.analystName!==currentUser()&&!d.endAt){toast('Atividade já adotada por '+firstName(d.analystName));return}d.analystName=currentUser();d.analystId=currentUser();d.status='Contatando técnico';d.startAt=d.startAt||new Date().toISOString();d.endAt=null;recordActivityHistory(a,d.status,'Atividade adotada');log('Atividade adotada',activityName(a),a.id);save();toast('Atividade adotada por '+firstName(currentUser()));selectedActivity=id;detailMode='view';render()}
 function abandonActivity(id){
  const a=arr('activities').find(x=>x.id===id);
  if(!a||a.data.analystName!==currentUser())return;
@@ -272,10 +313,20 @@ function renderRunbook(){let acts=projectActivities();$('#appContent').innerHTML
   });
   return imageWriteQueue;
  }
- const imageCard=(item,i)=>`<div class="evidence-card">${item[2]?`<span class="evidence-group-label">${esc(item[2])}</span>`:''}<b>${esc(item[0])}</b>${item[1]?`<p class="muted"><i>${esc(item[1])}</i></p>`:''}<div class="evidence-drop ${readOnly?'evidence-readonly':''}" data-evidence="${i}" ${readOnly?'':'tabindex="0" role="button"'} aria-label="${readOnly?'Visualizar':'Adicionar'} imagem: ${esc(item[0])}">${images[i]?`<img src="${images[i]}" alt="${esc(item[0])}">`:'<span class="evidence-placeholder">▧</span>'}${readOnly?'':`${images[i]?'<button type="button" class="evidence-remove" title="Remover imagem" aria-label="Remover imagem">×</button>':''}<span class="evidence-hint"><strong>+ ${images[i]?'Trocar':'Adicionar'} print</strong> ou cole com Ctrl+V / arraste aqui</span><input type="file" accept="image/*" hidden>`}</div></div>`;
+ // As imagens foram fornecidas por usuários; nenhum HTML/URL arbitrário entra em atributos.
+ images=images.map(src=>typeof src==='string'&&/^data:image\/(?:png|jpeg|gif|webp);base64,[a-z0-9+/=]+$/i.test(src)?src:'');
+ const imageCard=(item,i)=>`<div class="evidence-card">${item[2]?`<span class="evidence-group-label">${esc(item[2])}</span>`:''}<b>${esc(item[0])}</b>${item[1]?`<p class="muted"><i>${esc(item[1])}</i></p>`:''}<div class="evidence-drop ${readOnly?'evidence-readonly':''}" data-evidence="${i}" ${readOnly?'':'tabindex="0" role="button"'} aria-label="${readOnly?'Visualizar':'Adicionar'} imagem: ${esc(item[0])}">${images[i]?`<img src="${images[i]}" alt="${esc(item[0])}">`:'<span class="evidence-placeholder">▧</span>'}${readOnly?'':`${images[i]?'<button type="button" class="evidence-remove" title="Remover imagem" aria-label="Remover imagem">×</button>':''}<span class="evidence-hint"><strong>+ ${images[i]?'Trocar':'Adicionar'} print</strong> ou cole com Ctrl+V / arraste aqui</span><input type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden>`}</div></div>`;
  $('#appContent').innerHTML=`<div class="runbook-detail"><button class="secondary" id="rbBack">← Voltar</button><div class="runbook-detail-heading"><div class="eyebrow">RUNBOOK · ID VGR</div><h2>${esc(activityName(a))}</h2><p>${esc(r['ENDEREÇO COMPLETO']||r.HOSTNAME||'')}</p><p class="muted">Iniciado por ${esc(firstName(a.data.analystName||currentUser()))} em ${esc(a.data.startAt?new Date(a.data.startAt).toLocaleString('pt-BR'):'—')}</p></div>${sections.map((section)=>`<section class="evidence-section" data-runbook-sheet="${esc(section.id)}"><h3 class="floating-title">${esc(section.title)}</h3><div class="evidence-stack evidence-grid-two">${section.items.map(item=>{const i=flattened.findIndex(x=>x.item===item);return imageCard([item.title,item.description||'',item.group||''],i)}).join('')}</div></section>`).join('')}${readOnly?'<p class="runbook-viewonly">Somente visualização — runbook pertencente a outro analista.</p>':'<div class="runbook-save-actions"><button id="saveRunbook">Salvar runbook</button><button id="generateRunbook">Gerar Runbook (Excel)</button></div>'}</div>`;
  document.onpaste=null;$('#rbBack').onclick=()=>{document.onpaste=null;render()};
- function setImage(i,file){if(!file||!file.type.startsWith('image/'))return;let reader=new FileReader();reader.onload=()=>{images[i]=reader.result;let drop=document.querySelector(`[data-evidence="${i}"]`);if(drop){let old=drop.querySelector('img');if(!old){old=document.createElement('img');drop.querySelector('.evidence-placeholder')?.remove();drop.prepend(old)}old.src=images[i];old.alt=items[i][0];if(!drop.querySelector('.evidence-remove'))old.insertAdjacentHTML('afterend','<button type="button" class="evidence-remove" title="Remover imagem" aria-label="Remover imagem">×</button>');drop.querySelector('.evidence-remove').onclick=e=>{e.stopPropagation();images[i]='';old.remove();drop.querySelector('.evidence-remove')?.remove();drop.insertAdjacentHTML('afterbegin','<span class="evidence-placeholder">▧</span>');drop.querySelector('.evidence-hint strong').textContent='+ Adicionar print';persistRunbookImages().catch(err=>toast('Falha ao salvar: '+err.message))};drop.querySelector('.evidence-hint strong').textContent='+ Trocar print'};persistRunbookImages().catch(err=>toast('Falha ao salvar imagem: '+err.message)) };reader.readAsDataURL(file)}
+ async function setImage(i,file){
+  if(!file)return;
+  try{
+   await validateUpload(file,'image');
+   const bitmap=await createImageBitmap(file);const pixels=bitmap.width*bitmap.height;bitmap.close();
+   if(pixels>16000000)throw Error('Imagem excede 16 milhões de pixels.');
+  }catch(err){toast('Imagem recusada: '+err.message);return}
+  const reader=new FileReader();reader.onload=()=>{images[i]=reader.result;let drop=document.querySelector(`[data-evidence="${i}"]`);if(drop){let old=drop.querySelector('img');if(!old){old=document.createElement('img');drop.querySelector('.evidence-placeholder')?.remove();drop.prepend(old)}old.src=images[i];old.alt=items[i][0];if(!drop.querySelector('.evidence-remove'))old.insertAdjacentHTML('afterend','<button type="button" class="evidence-remove" title="Remover imagem" aria-label="Remover imagem">×</button>');drop.querySelector('.evidence-remove').onclick=e=>{e.stopPropagation();images[i]='';old.remove();drop.querySelector('.evidence-remove')?.remove();drop.insertAdjacentHTML('afterbegin','<span class="evidence-placeholder">▧</span>');drop.querySelector('.evidence-hint strong').textContent='+ Adicionar print';persistRunbookImages().catch(err=>toast('Falha ao salvar: '+err.message))};drop.querySelector('.evidence-hint strong').textContent='+ Trocar print'};persistRunbookImages().catch(err=>toast('Falha ao salvar imagem: '+err.message))};reader.readAsDataURL(file);
+ }
  if(!readOnly)document.querySelectorAll('[data-evidence]').forEach(drop=>{let i=Number(drop.dataset.evidence),input=drop.querySelector('input');drop.addEventListener('click',e=>{if(e.target.closest('.evidence-remove'))return;drop.focus()});drop.addEventListener('dblclick',e=>{if(e.target.closest('.evidence-remove'))return;input.click()});drop.querySelector('.evidence-remove')?.addEventListener('click',e=>{e.stopPropagation();images[i]='';drop.querySelector('img')?.remove();drop.querySelector('.evidence-remove')?.remove();if(!drop.querySelector('.evidence-placeholder'))drop.insertAdjacentHTML('afterbegin','<span class="evidence-placeholder">▧</span>');drop.querySelector('.evidence-hint strong').textContent='+ Adicionar print';persistRunbookImages().catch(err=>toast('Falha ao salvar: '+err.message));});drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}});input.onchange=()=>setImage(i,input.files[0]);drop.ondragover=e=>{e.preventDefault();drop.classList.add('dragover')};drop.ondragleave=()=>drop.classList.remove('dragover');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('dragover');setImage(i,e.dataTransfer.files[0])}});
  if(!readOnly)document.onpaste=e=>{let item=[...(e.clipboardData?.items||[])].find(x=>x.type.startsWith('image/'));if(item){let active=document.activeElement?.closest?.('[data-evidence]');setImage(active?Number(active.dataset.evidence):0,item.getAsFile())}};
  if(!readOnly)$('#generateRunbook').onclick=async()=>{try{let run=arr('runbooks').find(x=>x.data.activityId===id);if(!run){run={id:'rb_'+Date.now(),data:{activityId:id,slots:[],by:currentUser(),startedAt:new Date().toISOString()}};DB.runbooks.push(run)}await persistRunbookImages(true);run.data.slotKeys=slotKeys;run.data.updatedAt=new Date().toISOString();save();if(configuredRunbook && (project()?.data.runbookStorageKey||project()?.data.runbookWorkbookBase64))await exportRunbookImported(a,images,project().data);else await exportCopasaRunbook(a,images);toast('Runbook Excel gerado com sucesso')}catch(err){console.error(err);toast('Falha ao gerar Excel: '+err.message)}};
@@ -528,7 +579,8 @@ function logVgr(entry){const d=entry.data||{};const a=arr('activities').find(x=>
 function formatLogDate(ts){if(!ts)return '—';const d=new Date(ts);return Number.isNaN(d.getTime())?'—':d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})}
 function renderLogs(){let logs=arr('log');$('#appContent').innerHTML=`<div class="panel"><h3>Histórico de ações</h3><div class="filters"><input id="logSearch" placeholder="Buscar por data, ação, usuário, ID VGR ou detalhe" style="flex:1"><button id="exportLogs">Exportar CSV</button></div><div class="tablewrap"><table><thead><tr><th>Data</th><th>ID VGR</th><th>Ação</th><th>Usuário</th><th>Detalhe</th></tr></thead><tbody id="logsBody"></tbody></table></div></div>`;function draw(){let q=$('#logSearch').value.toLowerCase();$('#logsBody').innerHTML=logs.filter(x=>(JSON.stringify(x.data)+' '+logVgr(x)+' '+formatLogDate(x.data.ts)).toLowerCase().includes(q)).slice(0,500).map(x=>`<tr><td>${esc(formatLogDate(x.data.ts))}</td><td>${esc(logVgr(x))}</td><td>${esc(x.data.act||x.data.action||'')}</td><td>${esc(x.data.user||'')}</td><td>${esc(x.data.detail||x.data.actId||'')}</td></tr>`).join('')}$('#logSearch').oninput=draw;$('#exportLogs').onclick=()=>downloadCSV('logs.csv',logs.map(x=>({...x.data,dataFormatada:formatLogDate(x.data.ts),idVgr:logVgr(x)})));draw()}
 function renderAdmin(){
-let tabs=projectId?['← Voltar','Usuários','Configurar projeto']:[];
+if(!isAdmin()){page='home';render();return}
+let tabs=projectId?['← Voltar',...(isRootAdmin()?['Usuários']:[]),'Configurar projeto']:[];
 if(!projectId)adminTab='Projetos';else if(!tabs.includes(adminTab))adminTab='Configurar projeto';
 $('#appContent').innerHTML=`<div class="tabs">${tabs.map(t=>`<button class="${adminTab===t?'active':''}" data-atab="${esc(t)}">${esc(t)}</button>`).join('')}</div><div id="adminBody"></div>`;
 document.querySelectorAll('[data-atab]').forEach(b=>b.onclick=()=>{if(b.dataset.atab==='← Voltar'){projectId=null;selectedActivity=null;adminTab='Projetos';render();return}adminTab=b.dataset.atab;renderAdmin()});
@@ -536,12 +588,37 @@ let b=$('#adminBody');
 if(adminTab==='Projetos'){
  b.innerHTML=`<div class="panel"><h3>Projetos cadastrados</h3><p class="muted">Selecione um projeto para abrir suas configurações.</p><div class="project-list admin-project-grid">${arr('projects').map(p=>`<div class="detailhead panel project-row" data-selectp="${esc(p.id)}" role="button" tabindex="0"><div><b>${esc(getName(p))}</b><div class="small muted">${arr('activities').filter(a=>a.data.projectId===p.id||String((a.data.row||{}).EMPRESA||'').toLowerCase()===getName(p).toLowerCase()).length} atividades</div></div><button class="secondary" data-selectp="${esc(p.id)}">Selecionar</button></div>`).join('')}</div><h3>Cadastrar novo projeto</h3><div class="filters"><input id="newProject" placeholder="Nome do projeto"><button id="createProject">Criar projeto</button></div></div>`;
  $('#createProject').onclick=()=>{let name=$('#newProject').value.trim();if(!name)return toast('Informe o nome do projeto');let id=name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-');if(arr('projects').some(p=>p.id===id))return toast('Projeto já existe');DB.projects.push({id,data:{name,createdAt:new Date().toISOString(),setupOpen:true,activityTemplate:[]}});log('Projeto criado',name);save();renderAdmin()};
+ if(isRootAdmin()&&localStorage.getItem('gestaoImplantacaoDB')){
+  const holder=document.createElement('div');holder.className='gi-legacy-import';
+  holder.innerHTML='<h3>Migrar dados do navegador antigo</h3><p class="muted">Importação opcional de projetos, atividades, runbooks e arquivos armazenados neste computador. Não importa usuários nem senhas locais.</p><button class="secondary" type="button" id="migrateBrowserData">Importar meus dados locais para o Supabase</button>';
+  b.querySelector('.panel')?.appendChild(holder);
+  holder.querySelector('button').onclick=migrateLegacyBrowserData;
+ }
  b.querySelectorAll('.project-row[data-selectp]').forEach(x=>{const open=()=>{projectId=x.dataset.selectp;adminTab='Configurar projeto';renderAdmin()};x.onclick=open;x.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}}});
 }
 if(adminTab==='Usuários'){
- b.innerHTML=`<div class="panel"><h3>Cadastrar usuário</h3><p class="muted">Uma senha temporária será gerada para entrega manual. O envio por e-mail requer um serviço externo.</p><div class="row"><div class="field"><label>Nome</label><input id="uName"></div><div class="field"><label>Sobrenome</label><input id="uLast"></div><div class="field"><label>E-mail</label><input id="uEmail" type="email"></div><div class="field"><label>RE / matrícula</label><input id="uRe"></div></div><button id="createUser" style="margin-top:12px">Cadastrar usuário</button></div><div class="panel"><h3>Usuários cadastrados</h3>${arr('users').map(u=>`<div class="panel user-admin-row"><div><b>${esc((u.data.nome||'')+' '+(u.data.sobrenome||''))}</b><div class="small muted">${esc(u.data.email||'')} · ${esc(u.data.re||'')}</div></div><button class="secondary" data-reset-user="${esc(u.id)}">Redefinir senha</button></div>`).join('')||'<div class="empty">Nenhum usuário.</div>'}</div>`;
- $('#createUser').onclick=async()=>{let nome=$('#uName').value.trim(),sobrenome=$('#uLast').value.trim(),email=$('#uEmail').value.trim(),re=$('#uRe').value.trim();if(!nome||!sobrenome||!email||!re)return toast('Preencha nome, sobrenome, e-mail e matrícula');if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return toast('Informe um e-mail válido');if(arr('users').some(u=>u.data.email.toLowerCase()===email.toLowerCase()))return toast('E-mail já cadastrado');let user={id:'u_'+Date.now(),data:{nome,sobrenome,email,re,at:new Date().toISOString()}};DB.users.push(user);let password=await assignPassword(user);log('Usuário cadastrado',email);renderAdmin();showIssuedPassword(email,password)};
- b.querySelectorAll('[data-reset-user]').forEach(btn=>btn.onclick=async()=>{let u=arr('users').find(x=>x.id===btn.dataset.resetUser);if(!u||!confirm('Gerar nova senha temporária para '+u.data.email+'? A senha anterior deixará de funcionar neste navegador.'))return;let password=await assignPassword(u);log('Senha redefinida',u.data.email);showIssuedPassword(u.data.email,password)});
+ if(!isRootAdmin()){b.textContent='Acesso restrito ao administrador.';return}
+ const roles=[['analista','Analista'],['gestor','Gestor'],['administrador','Administrador']];
+ b.innerHTML=`<div class="panel"><h3>Convidar usuário</h3><p class="muted">O usuário recebe por e-mail um convite do Supabase Auth. Somente endereços @telefonica.com são permitidos. Senhas não são exibidas nem armazenadas pelo sistema.</p><div class="row"><div class="field"><label>Nome completo</label><input id="uName" maxlength="120"></div><div class="field"><label>E-mail corporativo</label><input id="uEmail" type="email" placeholder="nome@telefonica.com"></div><div class="field"><label>RE / matrícula</label><input id="uRe" maxlength="60"></div><div class="field"><label>Perfil inicial</label><select id="uRole">${roles.map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}</select></div></div><button id="createUser" style="margin-top:12px">Enviar convite</button></div><div class="panel"><h3>Usuários cadastrados</h3>${arr('users').map(u=>`<div class="panel user-admin-row"><div><b>${esc(u.data.nome||u.data.email||'')}</b><div class="small muted">${esc(u.data.email||'')} · ${esc(u.data.re||'')} · ${u.data.active?'Ativo':'Bloqueado'}</div></div><div class="gi-user-actions"><select data-user-role="${esc(u.id)}" aria-label="Perfil de ${esc(u.data.email)}" ${u.data.email===GICloud.profile()?.email?'disabled':''}>${roles.map(([v,t])=>`<option value="${v}" ${u.data.role===v?'selected':''}>${t}</option>`).join('')}</select><button class="secondary" data-active-user="${esc(u.id)}" ${u.data.email===GICloud.profile()?.email?'disabled':''}>${u.data.active?'Bloquear':'Ativar'}</button><button class="secondary" data-reset-user="${esc(u.id)}">Redefinir senha</button></div></div>`).join('')||'<div class="empty">Nenhum usuário.</div>'}</div>`;
+ const reloadUsers=async()=>{await GICloud.waitForSaves();DB=await GICloud.loadAll();renderAdmin()};
+ $('#createUser').onclick=async()=>{const button=$('#createUser');button.disabled=true;
+  try{const result=await GICloud.adminUsers('invite',{name:$('#uName').value.trim(),email:$('#uEmail').value.trim(),registration:$('#uRe').value.trim(),role:$('#uRole').value});await reloadUsers();toast(result.message||'Convite enviado por e-mail')}
+  catch(err){toast('Erro ao convidar: '+err.message,8000)}finally{button.disabled=false}
+ };
+ b.querySelectorAll('[data-user-role]').forEach(sel=>sel.onchange=async()=>{
+  try{await GICloud.adminUsers('setRole',{userId:sel.dataset.userRole,role:sel.value});await reloadUsers();toast('Perfil atualizado no servidor')}
+  catch(err){toast('Não foi possível alterar perfil: '+err.message);renderAdmin()}
+ });
+ b.querySelectorAll('[data-active-user]').forEach(btn=>btn.onclick=async()=>{
+  const user=arr('users').find(x=>x.id===btn.dataset.activeUser);if(!user)return;
+  try{await GICloud.adminUsers('setActive',{userId:user.id,active:!user.data.active});await reloadUsers();toast('Acesso atualizado')}
+  catch(err){toast('Não foi possível atualizar acesso: '+err.message)}
+ });
+ b.querySelectorAll('[data-reset-user]').forEach(btn=>btn.onclick=async()=>{
+  const user=arr('users').find(x=>x.id===btn.dataset.resetUser);if(!user||!confirm('Enviar um link de redefinição de senha para '+user.data.email+'?'))return;
+  try{await GICloud.adminUsers('reset',{email:user.data.email});toast('Link de redefinição enviado')}
+  catch(err){toast('Não foi possível enviar redefinição: '+err.message)}
+ });
 }
 if(adminTab==='Configurar projeto'){
  let p=project();if(!p){b.innerHTML='<div class="panel">Selecione um projeto na tela anterior.</div>';return}p.data=p.data||{};let template=p.data.activityTemplate||[];
@@ -692,9 +769,72 @@ if(adminTab==='Configurar projeto'){
 
 }
 }
-async function readTabularFile(file){if(!file)throw Error('Nenhum arquivo selecionado');let ext=(file.name.split('.').pop()||'').toLowerCase(),matrix=[];if(['xls','xlsx','xlsm','ods'].includes(ext)){if(!window.XLSX)throw Error('Biblioteca de leitura de planilhas indisponível; confira a conexão com a internet.');let wb=XLSX.read(await file.arrayBuffer(),{type:'array'});matrix=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:false});}else if(ext==='docx'||ext==='doc'){if(!window.mammoth)throw Error('Biblioteca DOCX indisponível; confira a conexão com a internet.');let result=await mammoth.convertToHtml({arrayBuffer:await file.arrayBuffer()});let doc=new DOMParser().parseFromString(result.value,'text/html');let table=doc.querySelector('table');if(table)matrix=[...table.rows].map(tr=>[...tr.cells].map(td=>td.textContent.trim()));else matrix=result.value.replace(/<[^>]+>/g,'\n').split(/\n+/).map(x=>[x.trim()]).filter(r=>r[0]);}else{let text=await file.text();if(text.includes('\u0000'))throw Error('Formato não suportado como texto. Tente exportar a planilha como XLSX ou CSV.');matrix=parseCSV(text)}matrix=matrix.filter(r=>Array.isArray(r)&&r.some(v=>String(v??'').trim()));if(matrix.length<1)throw Error('Arquivo vazio.');const headerRow=matrix.slice(0,15).findIndex(r=>r.some(h=>['idvgr','vgr','codigovgr','numerovgr','nrovgr'].includes(importColumnKey(h))));if(headerRow>0)matrix=matrix.slice(headerRow);let headers=matrix[0].map((h,i)=>String(h??'').trim()||`Campo ${i+1}`);let rows=matrix.slice(1).map(r=>Object.fromEntries(headers.map((h,i)=>[h,String(r[i]??'').trim()])));return {headers,rows}}
+async function validateUpload(file,category='spreadsheet'){
+ if(!(file instanceof File)||file.size===0)throw Error('Arquivo inválido ou vazio.');
+ const limits={spreadsheet:8*1024*1024,runbook:8*1024*1024,image:3*1024*1024};
+ if(file.size>limits[category])throw Error('Arquivo excede o limite de '+(limits[category]/1048576)+' MB.');
+ const ext=(file.name.split('.').pop()||'').toLowerCase();
+ const allowed=category==='image'?['png','jpg','jpeg','webp','gif']:
+   category==='runbook'?['xls','xlsx','xlsm','ods']:['xls','xlsx','xlsm','ods','docx','csv','txt','tsv'];
+ if(!allowed.includes(ext))throw Error('Extensão de arquivo não permitida: '+esc(ext));
+ const bytes=new Uint8Array(await file.slice(0,16).arrayBuffer());
+ const begins=(...signature)=>signature.every((b,i)=>bytes[i]===b);
+ const zip=begins(0x50,0x4b,0x03,0x04),ole=begins(0xd0,0xcf,0x11,0xe0);
+ if(['xlsx','xlsm','ods','docx'].includes(ext)&&!zip)throw Error('A assinatura interna do arquivo não corresponde à extensão.');
+ if(ext==='xls'&&!ole)throw Error('Arquivo XLS inválido (assinatura OLE ausente).');
+ if(category==='image'){
+   const valid=ext==='png'?begins(0x89,0x50,0x4e,0x47):
+     ['jpg','jpeg'].includes(ext)?begins(0xff,0xd8,0xff):
+     ext==='gif'?begins(0x47,0x49,0x46,0x38):
+     ext==='webp'?begins(0x52,0x49,0x46,0x46)&&String.fromCharCode(...bytes.slice(8,12))==='WEBP':false;
+   if(!valid)throw Error('A imagem não corresponde ao formato declarado.');
+   if(!['image/png','image/jpeg','image/gif','image/webp'].includes(file.type))
+     throw Error('Tipo MIME de imagem não permitido.');
+ }
+ return ext;
+}
+async function readTabularFile(file){
+ const ext=await validateUpload(file),maxRows=5002,maxColumns=200;
+ let matrix=[];
+ if(['xls','xlsx','xlsm','ods'].includes(ext)){
+   if(!window.XLSX)throw Error('Biblioteca de leitura de planilhas indisponível.');
+   const wb=XLSX.read(await file.arrayBuffer(),{type:'array',sheetRows:maxRows});
+   matrix=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:false});
+ }else if(ext==='docx'){
+   if(!window.mammoth)throw Error('Biblioteca DOCX indisponível.');
+   const result=await mammoth.convertToHtml({arrayBuffer:await file.arrayBuffer()});
+   const doc=new DOMParser().parseFromString(result.value,'text/html');
+   const table=doc.querySelector('table');
+   matrix=table?[...table.rows].map(tr=>[...tr.cells].map(td=>td.textContent.trim())):
+     result.value.replace(/<[^>]+>/g,'\n').split(/\n+/).map(x=>[x.trim()]).filter(r=>r[0]);
+ }else{
+   const text=await file.text();if(text.includes('\u0000'))throw Error('Texto contém bytes inválidos.');
+   matrix=parseCSV(text);
+ }
+ if(matrix.length>=maxRows)throw Error('Planilha acima de 5.000 linhas. Importe em lotes menores.');
+ if(matrix.some(row=>row.length>maxColumns||row.some(v=>String(v??'').length>4000)))
+   throw Error('Planilha com colunas ou campos excessivamente longos.');
+ matrix=matrix.filter(r=>Array.isArray(r)&&r.some(v=>String(v??'').trim()));
+ if(!matrix.length)throw Error('Arquivo vazio.');
+ const headerRow=matrix.slice(0,15).findIndex(r=>r.some(h=>['idvgr','vgr','codigovgr','numerovgr','nrovgr'].includes(importColumnKey(h))));
+ if(headerRow>0)matrix=matrix.slice(headerRow);
+ const headers=matrix[0].map((h,i)=>String(h??'').trim()||`Campo ${i+1}`);
+ const rows=matrix.slice(1).map(r=>Object.fromEntries(headers.map((h,i)=>[h,String(r[i]??'').trim()])));
+ return {headers,rows};
+}
 function parseCSV(t){let out=[],row=[],cell='',q=false;for(let i=0;i<t.length;i++){let c=t[i];if(c==='"'&&q&&t[i+1]==='"'){cell+='"';i++}else if(c==='"')q=!q;else if((c===','||c===';'||c==='\t')&&!q){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!q){if(c==='\r'&&t[i+1]==='\n')i++;row.push(cell);out.push(row);row=[];cell=''}else cell+=c}if(cell||row.length){row.push(cell);out.push(row)}return out}
-function downloadCSV(name,rows){let keys=[...new Set(rows.flatMap(o=>Object.keys(o||{})))];let csv=[keys,...rows.map(o=>keys.map(k=>{let v=o[k];if(v&&typeof v==='object')v=JSON.stringify(v);return '"'+String(v??'').replace(/"/g,'""')+'"'}))].map(r=>r.join(';')).join('\\r\\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
+function downloadCSV(name,rows){
+ const keys=[...new Set(rows.flatMap(o=>Object.keys(o||{})))];
+ const safe=value=>{
+  let text=typeof value==='object'&&value!==null?JSON.stringify(value):String(value??'');
+  if(/^[\t\r\n ]*[=+\-@]/.test(text))text="'"+text;
+  return '"'+text.replace(/"/g,'""')+'"';
+ };
+ const csv=[keys,...rows.map(obj=>keys.map(k=>safe(obj[k])))].map(row=>row.join(';')).join('\r\n');
+ const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));
+ const a=document.createElement('a');a.href=url;a.download=name;a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 // Reinicializacao unica dos dados de teste nesta versao publicada.
 // Mantem apenas a preferencia visual; nao altera dados de outros dominios.
 function resetTestDataOnce(){
@@ -719,10 +859,81 @@ async function migrateLegacyRunbookFiles(){
    }catch(err){console.warn('Modelo antigo preservado no armazenamento anterior:',err)}
  }
 }
-async function init(){resetTestDataOnce();const themeBtn=document.getElementById('themeToggle');const setTheme=(mode)=>{document.documentElement.dataset.theme=mode;localStorage.setItem('gi_theme',mode);themeBtn?.setAttribute('aria-label',mode==='light'?'Ativar tema escuro':'Ativar tema claro');themeBtn?.setAttribute('title',mode==='light'?'Ativar tema escuro':'Ativar tema claro')};setTheme(localStorage.getItem('gi_theme')==='light'?'light':'dark');if(themeBtn)themeBtn.onclick=()=>setTheme(document.documentElement.dataset.theme==='light'?'dark':'light');try{let saved=localStorage.getItem('gestaoImplantacaoDB');DB=saved?JSON.parse(saved):{activities:[],analysts:[],log:[],projects:[],runbooks:[],users:[]};for(const key of ['activities','analysts','log','projects','runbooks','users'])if(!Array.isArray(DB[key]))DB[key]=[];}catch(e){DB={activities:[],analysts:[],log:[],projects:[],runbooks:[],users:[]};}await migrateLegacyRunbookFiles();document.querySelectorAll('.nav').forEach(b=>{b.addEventListener('click',e=>{if(e.ctrlKey||e.metaKey||e.shiftKey||e.button!==0)return;if(b.dataset.page==='admin'&&!isAdmin()){e.preventDefault();return toast('Acesso exclusivo do administrador')}e.preventDefault();page=b.dataset.page;selectedActivity=null;render()})});
- const requested=new URLSearchParams(location.search);const requestedProject=requested.get('project');if(requestedProject&&arr('projects').some(p=>p.id===requestedProject))projectId=requestedProject;
- const requestedPage=requested.get('page');if(['home','runbook','logs','admin'].includes(requestedPage))page=requestedPage;
- if(sessionStorage.getItem('gi_authenticated')==='yes'&&localStorage.getItem('gi_user')){document.querySelector('.app').style.display='flex';render()}else showLogin();setInterval(()=>document.querySelectorAll('.elapsed[data-start]').forEach(el=>el.textContent='◴ '+elapsed(el.dataset.start)),1000)}
+async function migrateLegacyBrowserData(){
+ if(!isRootAdmin())throw Error('Somente administrador pode migrar dados.');
+ let old;
+ try{old=JSON.parse(localStorage.getItem('gestaoImplantacaoDB')||'null')}
+ catch(error){return toast('O banco local antigo está ilegível: '+error.message)}
+ if(!old||!Array.isArray(old.projects)||!Array.isArray(old.activities))return toast('Não há dados locais válidos para migrar.');
+ if(!confirm(`Revisar e importar até ${old.projects.length} projeto(s) e ${old.activities.length} atividade(s) deste computador? Os usuários/senhas locais NÃO serão copiados.`))return;
+ let addedProjects=0,addedActs=0,addedRunbooks=0,skipped=0,files=0;
+ const projectIds=new Set(arr('projects').map(p=>p.id));
+ for(const p of old.projects){
+  if(!p?.id||!p.data||projectIds.has(p.id))continue;
+  if(!/^[\w:-]{1,150}$/.test(p.id)){skipped++;continue}
+  DB.projects.push({id:p.id,data:p.data});projectIds.add(p.id);addedProjects++;
+ }
+ const activityIds=new Set(arr('activities').map(a=>a.id));
+ const vgrSet=new Set(arr('activities').map(a=>a.data?.projectId+'|'+activityVgrKey(a)).filter(x=>!x.endsWith('|')));
+ for(const a of old.activities){
+  if(!a?.id||!a.data||activityIds.has(a.id)||!projectIds.has(a.data.projectId)){skipped++;continue}
+  const vgr=activityVgrKey(a),composite=a.data.projectId+'|'+vgr;
+  if(vgr&&vgrSet.has(composite)){skipped++;continue}
+  DB.activities.push({id:a.id,data:a.data});activityIds.add(a.id);
+  if(vgr)vgrSet.add(composite);addedActs++;
+ }
+ const runbookIds=new Set(arr('runbooks').map(r=>r.id));
+ for(const r of old.runbooks||[]){
+  if(!r?.id||!r.data||runbookIds.has(r.id)||!activityIds.has(r.data.activityId)){skipped++;continue}
+  DB.runbooks.push({id:r.id,data:r.data});runbookIds.add(r.id);addedRunbooks++;
+ }
+ try{
+  GICloud.queueSave(DB);await GICloud.flush();
+  // Arquivos antigos permanecem no IndexedDB; copiamos sem apagá-los de lá.
+  if('indexedDB' in window){
+   const idb=await new Promise((resolve,reject)=>{
+    const req=indexedDB.open('gestaoImplantacaoArquivos',1);
+    req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+   });
+   if(idb.objectStoreNames.contains('runbooks')){
+    const entries=await new Promise((resolve,reject)=>{
+     const tx=idb.transaction('runbooks','readonly'),store=tx.objectStore('runbooks');
+     const result=[];store.openCursor().onsuccess=e=>{const c=e.target.result;if(c){result.push([c.key,c.value]);c.continue()}};
+     tx.oncomplete=()=>resolve(result);tx.onerror=()=>reject(tx.error);
+    });
+    for(const [key,value] of entries){
+     const projectKey=String(key).startsWith('runbook-imagens:')?String(key).split(':')[1]:String(key);
+     if(!projectIds.has(projectKey))continue;
+     try{await RunbookStorage.put(key,value);files++}catch(error){console.warn('Arquivo local não migrado:',key,error)}
+    }
+   }
+   idb.close();
+  }
+  await migrateLegacyRunbookFiles();await GICloud.waitForSaves();
+  DB=await GICloud.loadAll();renderAdmin();
+  toast(`Migração concluída: ${addedProjects} projeto(s), ${addedActs} atividade(s), ${addedRunbooks} runbook(s), ${files} arquivo(s); ${skipped} ignorado(s).`,9000);
+ }catch(error){toast('Migração incompleta: '+error.message+' — mantenha os dados locais e confira o servidor.',10000)}
+}
+async function init(){
+ const themeBtn=document.getElementById('themeToggle');
+ const setTheme=(mode)=>{document.documentElement.dataset.theme=mode;localStorage.setItem('gi_theme',mode);themeBtn?.setAttribute('aria-label',mode==='light'?'Ativar tema escuro':'Ativar tema claro');themeBtn?.setAttribute('title',mode==='light'?'Ativar tema escuro':'Ativar tema claro')};
+ setTheme(localStorage.getItem('gi_theme')==='light'?'light':'dark');
+ if(themeBtn)themeBtn.onclick=()=>setTheme(document.documentElement.dataset.theme==='light'?'dark':'light');
+ DB={activities:[],analysts:[],log:[],projects:[],runbooks:[],users:[]};
+ document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',e=>{
+  if(e.ctrlKey||e.metaKey||e.shiftKey||e.button!==0)return;
+  if(b.dataset.page==='admin'&&!isAdmin()){e.preventDefault();return toast('Acesso exclusivo do gestor ou administrador')}
+  e.preventDefault();page=b.dataset.page;selectedActivity=null;render();
+ }));
+ const requested=new URLSearchParams(location.search);
+ if(['home','runbook','logs','admin'].includes(requested.get('page')))page=requested.get('page');
+ try{
+   await GICloud.initialize();
+   const current=await GICloud.getProfile();
+   if(current)await giEnterApp();else showLogin();
+ }catch(error){console.error('Inicialização Supabase',error);showLogin(error.message)}
+ setInterval(()=>document.querySelectorAll('.elapsed[data-start]').forEach(el=>el.textContent='◴ '+elapsed(el.dataset.start)),1000);
+}
 init();
 
 
@@ -889,12 +1100,19 @@ function informePanelHtml(summary){
 }
 function informeEditorContent(editor){
  const cloned=editor.cloneNode(true);
- cloned.querySelectorAll('script,style,iframe,object,embed,form').forEach(el=>el.remove());
+ cloned.querySelectorAll('script,style,iframe,object,embed,form,svg,math,meta,link,base,video,audio').forEach(el=>el.remove());
+ const allowed=new Set(['DIV','SPAN','P','BR','B','STRONG','EM','I','U','S','UL','OL','LI','TABLE','TR','TD','TH','TBODY','THEAD','H1','H2','H3','SECTION','A']);
+ [...cloned.querySelectorAll('*')].reverse().forEach(el=>{
+  if(!allowed.has(el.tagName))el.replaceWith(...el.childNodes);
+ });
  cloned.querySelectorAll('*').forEach(el=>{
   el.removeAttribute('contenteditable');
   for(const attr of [...el.attributes]){
-   if(/^on/i.test(attr.name)||['srcdoc','formaction'].includes(attr.name))el.removeAttribute(attr.name);
-   if(['href','src'].includes(attr.name)&&!/^https?:\/\//i.test(attr.value))el.removeAttribute(attr.name);
+   if(!['style','href','role','cellpadding','cellspacing','colspan','rowspan'].includes(attr.name)){
+    el.removeAttribute(attr.name);continue;
+   }
+   if(attr.name==='style'&&(/url\s*\(|expression\s*\(|@import|behavior\s*:/i.test(attr.value)||attr.value.length>1000))el.removeAttribute('style');
+   if(attr.name==='href'&&!/^https:\/\/[a-z0-9.-]+(?:\/|$)/i.test(attr.value))el.removeAttribute('href');
   }
  });
  cloned.removeAttribute('contenteditable');
@@ -929,8 +1147,7 @@ function openInformeComposer(selection){
  document.getElementById('informeComposeOverlay')?.remove();
  const summary=informeSummary(selection),logged=currentUser();
  const emailPattern=/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
- const foundUser=arr('users').find(u=>String(u?.data?.name||u?.data?.username||'').toLowerCase()===logged.toLowerCase());
- const sender=emailPattern.test(logged)?logged:(emailPattern.test(foundUser?.data?.email||'')?foundUser.data.email:'');
+ const sender=GICloud.profile()?.email||'';
  const overlay=document.createElement('div');overlay.id='informeComposeOverlay';overlay.className='report-overlay informe-overlay';
  const plane='<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg>';
  const cross='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
@@ -944,7 +1161,7 @@ function openInformeComposer(selection){
      <div class="informe-outlook-row"><label class="informe-outlook-label" for="informeTo">Para</label><input id="informeTo" type="text" placeholder="Destinatários; separe os e-mails por ponto e vírgula" autocomplete="off"></div>
      <div class="informe-outlook-row"><label class="informe-outlook-label" for="informeCc">Cc</label><input id="informeCc" type="text" placeholder="Com cópia (opcional)" autocomplete="off"></div>
      <div class="informe-outlook-row informe-subject-row"><label class="informe-outlook-label" for="informeSubject">Assunto</label><input id="informeSubject" type="text" value="${esc('Atualização de atividades — '+summary.projectName+' — '+summary.date)}"></div>
-     <div class="informe-from-row"><label for="informeFrom">De</label><input id="informeFrom" type="email" value="${esc(sender)}" placeholder="Seu e-mail (conta de envio)"><span id="informeSenderHint">${sender?'Conta sugerida pelo usuário logado.':'Usuário logado: '+esc(logged)+'. Informe o e-mail remetente, se possuir.'}</span></div>
+     <div class="informe-from-row"><label for="informeFrom">De</label><input id="informeFrom" type="email" value="${esc(sender)}" readonly><span id="informeSenderHint">Remetente associado à sessão autenticada.</span></div>
     </div>
     <div class="informe-form" id="informeTeamsForm" hidden><div class="informe-form-grid"><label>Equipe<input id="informeTeam" type="text" placeholder="Nome da equipe"></label><label>Canal<input id="informeChannel" type="text" placeholder="Canal do Teams"></label><label class="informe-wide">Fluxo de trabalho<input id="informeWorkflow" type="text" placeholder="Nome do fluxo de trabalho do Power Automate"></label></div><p class="informe-hint">A postagem automática no fluxo será disponibilizada com a futura integração do Microsoft 365.</p></div>
    </div>

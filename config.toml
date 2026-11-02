@@ -1,0 +1,5 @@
+[functions.gi-users]
+verify_jwt = true
+
+[functions.gi-files]
+verify_jwt = true

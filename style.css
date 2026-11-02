@@ -1916,3 +1916,13 @@ html[data-theme="light"] .admin-activity-content .admin-search-heading .small{
 @media(max-width:750px){
   .admin-update-activities .admin-update-heading{grid-column:1}
 }
+.gi-user-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+.gi-user-actions select{min-width:145px;max-width:210px}
+.gi-user-actions button{font-size:12px;white-space:nowrap}
+.gi-legacy-import{margin-top:24px;padding:18px 20px;border-radius:14px;background:var(--card,#372748);box-shadow:7px 10px 22px rgba(0,0,0,.18)}
+.gi-legacy-import h3{margin:0 0 10px}
+.gi-legacy-import .muted{max-width:720px}
+.gi-refresh-button{padding:8px 11px;font-size:12px;white-space:nowrap}
+.login-card #forgotPassword,.login-card #cancelReset{width:100%;margin-top:9px}
+.login-card input[readonly]{opacity:.9}
+@media(max-width:680px){.gi-user-actions{justify-content:flex-start}.user-admin-row{flex-direction:column;align-items:flex-start}.gi-refresh-button{font-size:0}.gi-refresh-button::first-letter{font-size:18px}}
