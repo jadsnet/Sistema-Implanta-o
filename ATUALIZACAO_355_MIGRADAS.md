@@ -1,5 +1,12 @@
 # Atualização do Diário de Bordo — 355 migradas
 
+## Ajustes na filtragem e na confirmação da planilha
+
+- O título **Resultados da filtragem customizada** agora mostra a quantidade exata de atividades filtradas por analista e/ou status, independentemente do limite inicial de linhas visíveis.
+- Ao informar um analista ou escolher um status na **Filtragem customizada**, a seleção de data muda para **Total geral**, sem o ícone associado a **Outro dia**. A lista deixa de aplicar a data anterior e também limpa uma pesquisa textual que estivesse ativa.
+- O botão **Confirmar** da importação exibe uma bolinha formada por oito pontinhos giratórios e a mensagem de salvamento. A animação permanece até a gravação no Supabase terminar ou ocorrer um erro. Os botões de confirmação e descarte ficam temporariamente desabilitados para evitar cliques duplicados.
+- Também há animação na confirmação de importação de **novas atividades**.
+
 ## O que foi corrigido
 
 - A aba **Diario de Bordo_Copasa_16.10.26** possui 752 linhas e **500 IDs VGR únicos**. O sistema agora consolida todas as movimentações de um ID antes de aplicar a atualização.
