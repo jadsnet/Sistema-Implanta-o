@@ -1,5 +1,14 @@
 # Atualização do Diário de Bordo — 355 migradas
 
+## Ranking de analistas
+
+- Na tela principal de atividades foi adicionado o botão **Ranking**, imediatamente ao lado de **Extrair relatório**.
+- O botão mostra/oculta uma **lista textual na própria página**, com o nome e o sobrenome de cada analista, o total de **Migradas**, o total de **Quebradas** e a medalha de primeiro lugar 🥇 na última coluna.
+- A lista considera **todo o projeto**, independentemente da data, da pesquisa ou do cartão de status selecionado. Cada ID VGR é contado no máximo uma vez.
+- Os nomes usam a mesma consolidação de aliases da importação. Pessoas diferentes com o mesmo primeiro nome (como Bruno Costa e Bruno Neves) continuam em linhas distintas.
+- A ordenação é por **mais atividades migradas**; em caso de empate, **menos quebradas**; persistindo o empate, ordem alfabética. Atividades sem analista ou ainda não concluídas não entram no ranking.
+- O botão fecha a lista ao ser clicado novamente. Esta versão não exige novo SQL além do arquivo `04_analistas_aliases.sql` já incluído na atualização anterior.
+
 ## Correção posterior: cronômetro e nomes de analistas
 
 - **Migrada** e **Quebra** não exibem nem atualizam o cronômetro, mesmo quando a planilha forneceu um horário de início. Na lista e no detalhe aparece a **data de conclusão** (com fallback para `DATA SDWAN` quando a data de término não existe).
