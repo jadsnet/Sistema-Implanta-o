@@ -116,6 +116,7 @@ no editor; os arquivos gerados foram reabertos como planilhas Excel.
 Na página de atividades, abra **Extrair relatório**, configure o período/filtro e os campos e clique em **Enviar informe**, à direita da opção de período. A nova tela é aberta sobre o relatório, na mesma aba.
 
 - **E-mail:** os campos **Para**, **Cc** e **Assunto** ficam em linhas, como no Outlook. O botão com aviãozinho fica à esquerda. O remetente é sugerido quando o usuário logado contém um e-mail válido; para logins com apenas nome, há o campo **De** opcional.
+- **Aparência:** as três linhas têm espaçamento próprio, cantos arredondados e sombra inferior/direita, sem bordas divisórias. A prévia do anexo fica num cartão compacto alinhado à esquerda.
 - **Corpo da mensagem:** editor HTML com opções de negrito, itálico, sublinhado, tachado, listas, título e cor do texto. O próprio corpo contém o painel de status e os totais, sem um cartão de prévia separado.
 - **Anexo automático no rascunho local:** ao abrir a composição, o sistema prepara um **XLSX** com o mesmo filtro e colunas do relatório, mostra nome/tamanho e permite baixar. O exportador de XLSX também funciona offline utilizando a biblioteca JSZip distribuída com o sistema.
 - **Preparar e-mail:** baixa um arquivo **.eml** contendo destinatários, CC, assunto, corpo HTML com painel e a planilha XLSX incorporada como anexo MIME. Abra o arquivo no Outlook ou em outro cliente compatível. A maneira de abrir/editar um .eml pode variar conforme a versão do cliente.

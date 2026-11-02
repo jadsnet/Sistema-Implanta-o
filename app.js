@@ -876,7 +876,7 @@ function informePanelHtml(summary){
   return '<td style="padding:5px;vertical-align:top"><div style="border-radius:9px;border-left:4px solid '+tone+';background:#614777;padding:11px 16px;min-width:110px;box-sizing:border-box">'+
    '<div style="color:#ffffff;font-size:12px;font-weight:bold">'+esc(name)+'</div><div style="color:#ffffff;font-size:24px;font-weight:bold;margin-top:6px">'+count+'</div></div></td>';
  }).join('');
- return '<section class="informe-body-panel" contenteditable="false" style="background:#39244f;color:#fff;border:1px solid #806495;border-radius:13px;padding:17px 16px;margin:18px 0">'+
+ return '<section class="informe-body-panel" contenteditable="false" style="background:#39244f;color:#fff;border:0;box-shadow:4px 7px 17px rgba(20,6,31,.36);border-radius:13px;padding:17px 16px;margin:18px 0">'+
   '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">'+
   '<div><div style="font-size:10px;color:#d8abf2;letter-spacing:1px;font-weight:bold">PAINEL DE ATIVIDADES</div>'+
   '<div style="font-size:20px;font-weight:bold;margin:5px 0">'+esc(summary.projectName)+'</div>'+
