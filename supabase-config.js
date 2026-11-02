@@ -4,6 +4,6 @@
  * NUNCA coloque secret, service_role, JWT secret ou senha neste arquivo.
  */
 window.GI_SUPABASE_CONFIG = Object.freeze({
-  url: 'https://wiyvzylvgigbbhqsnxff.supabase.co',
-  publishableKey: 'sb_publishable_P27j5y6N6DhwCtzo742-yw_AvBXqIw8'
+  url: 'https://SEU-PROJECT-REF.supabase.co',
+  publishableKey: 'COLE_AQUI_SUA_PUBLISHABLE_KEY'
 });

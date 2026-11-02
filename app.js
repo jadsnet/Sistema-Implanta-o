@@ -192,8 +192,9 @@ function activityDetail(id,mode='view',adminMode=false){
  let a=arr('activities').find(x=>x.id===id);if(!a)return'';
  let d=a.data,r=d.row||{},ed=d.ed||{};
  const extraDefinitions=(project()?.data?.extraFields||[]).map(x=>typeof x==='string'?{name:x,section:'Outras informações'}:x).filter(x=>x&&x.name);
- const removedFields=new Set((project()?.data?.removedProjectFields||[]).map(x=>String(x).toLocaleLowerCase('pt-BR')));const keys=[...new Set([...Object.keys(r),...extraDefinitions.map(x=>x.name),'MUNICIPIO','LP','IP LINK','SERIAL MX','TIPO DE ATENDIMENTO','REPARO','NOME DO TÉCNICO','TELEFONE DO TÉCNICO','NOME DO RESPONSÁVEL NO LOCAL','TELEFONE DO RESPONSÁVEL'])].filter(k=>String(k).trim()&&!/^(_status|_analista|_motivo)$/i.test(k)&&!removedFields.has(k.toLocaleLowerCase('pt-BR')));
- const val=k=>ed[k]!==undefined?ed[k]:(r[k]??'');
+ const extraNames=new Map(extraDefinitions.map(f=>[importColumnKey(f.name),f.name]));
+ const removedFields=new Set((project()?.data?.removedProjectFields||[]).map(x=>importColumnKey(x)));const keys=[...new Set([...Object.keys(r),...extraDefinitions.map(x=>x.name),'MUNICIPIO','LP','IP LINK','SERIAL MX','TIPO DE ATENDIMENTO','REPARO','NOME DO TÉCNICO','TELEFONE DO TÉCNICO','NOME DO RESPONSÁVEL NO LOCAL','TELEFONE DO RESPONSÁVEL'].map(k=>extraNames.get(importColumnKey(k))||k))].filter(k=>String(k).trim()&&!/^(_status|_analista|_motivo)$/i.test(k)&&!removedFields.has(importColumnKey(k)));
+ const val=k=>{if(ed[k]!==undefined)return ed[k];if(r[k]!==undefined)return r[k];const original=Object.keys({...r,...ed}).find(name=>importColumnKey(name)===importColumnKey(k));return original?(ed[original]??r[original]??''):''};
  const canEdit=adminMode||d.analystName===currentUser();
  const field=k=>`<div class="field"><label>${esc(k==='REPARO'?'REPARO (TIKET NOC - SAE)':k)}</label><input data-edit="${esc(k)}" value="${esc(val(k))}" ${k==='IP LINK'?'inputmode="decimal" placeholder="0.0.0.0/0" pattern="[0-9./]*"':''} ${canEdit?'':'readonly'}></div>`;
  const groups=[
@@ -342,71 +343,132 @@ function allProjectFieldNames(p){
 // Importações por ID VGR: os nomes das colunas podem variar na ordem,
 // acentuação, espaços e pontuação sem afetar a correspondência dos campos.
 function importColumnKey(value){return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]/g,'')}
-function importVgrKey(value){return String(value??'').trim().replace(/\s+/g,'').toLocaleLowerCase('pt-BR')}
+function importVgrKey(value){return String(value??'').trim().replace(/\s+/g,'').replace(/^(\d+)\.0+$/,'$1').toLocaleLowerCase('pt-BR')}
 function importVgrHeader(headers){return headers.find(h=>['idvgr','vgr','codigovgr','numerovgr','nrovgr'].includes(importColumnKey(h)))}
-function activityVgrKey(a){const r=a.data?.row||{},ed=a.data?.ed||{};const key=Object.keys({...r,...ed}).find(k=>importColumnKey(k)==='idvgr');return importVgrKey(key?(ed[key]??r[key]):'')}
+function activityVgrKey(a){const values=[a.data?.ed||{},a.data?.row||{}];for(const object of values){const key=Object.keys(object).find(k=>['idvgr','vgr','codigovgr','numerovgr','nrovgr'].includes(importColumnKey(k))&&importVgrKey(object[k]));if(key)return importVgrKey(object[key])}return ''}
+// Nomes equivalentes do diário de bordo e dos formulários cadastrados no projeto.
+// Campos personalizados (como Parceiro) têm prioridade sobre o nome original da coluna.
+const importFieldAliases={
+ tktnoc:'reparo',ticketnoc:'reparo',ticketdonoc:'reparo',tikietnoc:'reparo',
+ serialnumber:'serialmx',serialnumberequipamento:'serialmx',
+ modeloequipamento:'equipamento',velocidade:'velocidadedolink',velocidadelink:'velocidadedolink',
+ ipdedicado:'iddedicado',enderecodeinstalacaobaseprevendas:'enderecocompleto',
+ unidadesfortinet:'unidadescomfortinet','56unidadesfortinet':'unidadescomfortinet',
+};
+function importedCell(value){
+ if(value instanceof Date&&!Number.isNaN(value.getTime())){
+  const pad=n=>String(n).padStart(2,'0'),time=`${pad(value.getUTCHours())}:${pad(value.getUTCMinutes())}:${pad(value.getUTCSeconds())}`;
+  if(value.getUTCFullYear()<1901)return time; // Horas Excel sem uma data associada.
+  const day=`${value.getUTCFullYear()}-${pad(value.getUTCMonth()+1)}-${pad(value.getUTCDate())}`;
+  return time==='00:00:00'?day:`${day} ${time}`;
+ }
+ return String(value??'').trim();
+}
+function importedDateDay(value){
+ const text=String(value??'').trim();let match;
+ if((match=text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s]|$)/)))return `${match[1]}-${match[2].padStart(2,'0')}-${match[3].padStart(2,'0')}`;
+ if((match=text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s|$)/))){const year=+match[3]<100?2000+(+match[3]):+match[3];return `${year}-${match[2].padStart(2,'0')}-${match[1].padStart(2,'0')}`}
+ return '';
+}
+function importedTime(value){
+ const text=String(value??'').trim();const match=text.match(/(?:^|[T\s])(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*(AM|PM))?$/i);
+ if(!match)return '';
+ let hour=+match[1];const minute=+match[2],second=+(match[3]||0),period=match[4]?.toUpperCase();
+ if(minute>59||second>59||hour>(period?12:23)||period&&hour<1)return '';
+ if(period)hour=hour%12+(period==='PM'?12:0);
+ return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}:${String(second).padStart(2,'0')}`;
+}
+function importedMovementDate(row){
+ const key=Object.keys(row).find(k=>['datasdwan','datadaatividade','dataatividade','data'].includes(importColumnKey(k)));
+ return key?importedDateDay(row[key]):'';
+}
+function importedMovementOrder(row,index){
+ const day=importedMovementDate(row);return day?Date.parse(`${day}T00:00:00`):index;
+}
 function prepareActivitySpreadsheet(data,p,mode){
  const idHeader=importVgrHeader(data.headers||[]);
  if(!idHeader)throw Error('A planilha deve conter a coluna ID VGR para identificar cada atividade.');
  const existing=new Map((mode==='new'?arr('activities'):projectActivities()).filter(a=>mode==='new'||a.data.projectId===p.id||String(a.data.row?.EMPRESA||'').toLocaleLowerCase('pt-BR')===getName(p).toLocaleLowerCase('pt-BR')).map(a=>[activityVgrKey(a),a]).filter(([key])=>key));
- const seen=new Set(),entries=[];let missing=0,repeated=0,already=0,notFound=0;
- for(const row of data.rows){
+ const groups=new Map(),entries=[];let missing=0,repeated=0,already=0,notFound=0;
+ for(const [index,row] of data.rows.entries()){
   const key=importVgrKey(row[idHeader]);if(!key){missing++;continue}
-  if(seen.has(key)){repeated++;continue}seen.add(key);
+  if(groups.has(key))repeated++;
+  else groups.set(key,[]);
+  groups.get(key).push({row,index,order:importedMovementOrder(row,index)});
+ }
+ for(const [key,group] of groups){
   const match=existing.get(key);
   if(mode==='new'&&match){already++;continue}
   if(mode==='update'&&!match){notFound++;continue}
+  // O mesmo ID pode ter várias movimentações; usa a mais recente para status,
+  // mantendo os campos preenchidos em movimentações anteriores.
+  const row={};group.sort((a,b)=>a.order-b.order||a.index-b.index);
+  for(const item of group)for(const [header,value] of Object.entries(item.row))if(String(value??'').trim()){
+   row[header]=value;
+   const field=importColumnKey(header);
+   if(['horarioinicio','horariodeinicio','datadeinicio','inicioem','inicioatividade','datahorainicio'].includes(field))row.__importStartDate=importedMovementDate(item.row);
+   if(['horariofim','horariofinal','horariotermino','horariodetermino','datadetermino','terminoem','fimatividade','datahorafim','datahoratermino'].includes(field))row.__importEndDate=importedMovementDate(item.row);
+  }
   entries.push({key,row,activity:match||null});
  }
- return {idHeader,entries,unique:seen.size,missing,repeated,already,notFound,total:data.rows.length};
+ return {idHeader,entries,unique:groups.size,missing,repeated,already,notFound,total:data.rows.length};
 }
 function importedStatus(value){
  const key=importColumnKey(value);
  const exact=[...activeStatuses,'Pendente','Migrada','Quebra','Abandonada'].find(s=>importColumnKey(s)===key);
  if(exact)return exact;
- if(['migradas','concluida','concluido','concluidas','concluidos'].includes(key))return 'Migrada';
- if(['quebrada','quebradas','quebrado','quebrados','quebra'].includes(key))return 'Quebra';
+ if(['migrado','migrados','migradas','concluida','concluido','concluidas','concluidos'].includes(key))return 'Migrada';
+ if(['quebrada','quebradas','quebrado','quebrados','quebra'].includes(key)||key.startsWith('quebra'))return 'Quebra';
+ if(['semacionamento','agendado','agendada','naoiniciado','naoiniciada'].includes(key))return 'Pendente';
  if(['emandamento','andamento'].includes(key))return 'Em andamento';
  if(['abandonaratividade','abandonado'].includes(key))return 'Abandonada';
  return null;
 }
-function importedDate(value){
- const str=String(value??'').trim();if(!str)return null;
- const match=str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
- const date=match?new Date(+match[3],+match[2]-1,+match[1],+(match[4]||0),+(match[5]||0),+(match[6]||0)):new Date(str);
- if(Number.isNaN(date.getTime())||match&&(date.getDate()!==+match[1]||date.getMonth()!==+match[2]-1))return null;
+function importedDate(value,dayFallback=''){
+ const str=String(value??'').trim(),day=importedDateDay(str)||dayFallback,time=importedTime(str);
+ if(!str||!day)return null;
+ const parts=day.split('-').map(Number),hours=(time||'00:00:00').split(':').map(Number);
+ const date=new Date(parts[0],parts[1]-1,parts[2],...hours);
+ if(Number.isNaN(date.getTime())||date.getFullYear()!==parts[0]||date.getMonth()!==parts[1]-1||date.getDate()!==parts[2])return null;
  return date.toISOString();
 }
 function mergeImportedActivityFields(a,row,p,idHeader){
- const data=a.data,existing=data.row||(data.row={}),editable=data.ed||{},known=new Map(allProjectFieldNames(p).map(k=>[importColumnKey(k),k]));
- for(const key of Object.keys(existing))known.set(importColumnKey(key),key);
+ const data=a.data,existing=data.row||(data.row={}),editable=data.ed||(data.ed={});
+ const known=new Map(allProjectFieldNames(p).map(k=>[importColumnKey(k),k]));
+ for(const key of Object.keys(existing))if(!known.has(importColumnKey(key)))known.set(importColumnKey(key),key);
+ const extras=new Map((p.data.extraFields||[]).map(f=>typeof f==='string'?[importColumnKey(f),f]:[importColumnKey(f.name),f.name]));
+ for(const [key,name] of extras)known.set(key,name);
+ const dateContext=importedMovementDate(row);
  let changed=false;
  const assign=(target,key,value)=>{if(target[key]!==value){target[key]=value;changed=true}};
  for(const [header,raw] of Object.entries(row)){
+  if(header.startsWith('__import'))continue;
   const value=String(raw??'').trim();if(!value||header===idHeader)continue; // vazios não apagam dados atuais
   const normalized=importColumnKey(header);
-  if(['status','statusdaatividade','situacao','situacaodaatividade'].includes(normalized)){
+  if(['status','statussdwan','statusdaatividade','situacao','situacaodaatividade'].includes(normalized)){
    const next=importedStatus(value);if(next)assign(data,'status',next);continue;
   }
-  if(['analista','nomedoanalista','nomedoanalistadaatividade','responsavelpelaatividade'].includes(normalized)){
+  if(['analista','analistatecnico','analistadaatividade','nomedoanalista','nomedoanalistadaatividade','responsavelpelaatividade','analistaresponsavel'].includes(normalized)){
    assign(data,'analystName',value);assign(data,'analystId',value);continue;
   }
   if(['observacao','observacoes','observacoesdaatividade','motivo'].includes(normalized)){
    assign(data,'observations',value);continue;
   }
-  if(['horariodeinicio','datadeinicio','inicioem','inicioatividade'].includes(normalized)){
-   const date=importedDate(value);if(date)assign(data,'startAt',date);continue;
+  if(['horarioinicio','horariodeinicio','datadeinicio','inicioem','inicioatividade','datahorainicio'].includes(normalized)){
+   const date=importedDate(value,row.__importStartDate||dateContext);if(date)assign(data,'startAt',date);continue;
   }
-  if(['horariodetermino','datadetermino','terminoem','fimatividade'].includes(normalized)){
-   const date=importedDate(value);if(date)assign(data,'endAt',date);continue;
+  if(['horariofim','horariofinal','horariotermino','horariodetermino','datadetermino','terminoem','fimatividade','datahorafim','datahoratermino'].includes(normalized)){
+   const date=importedDate(value,row.__importEndDate||dateContext);if(date)assign(data,'endAt',date);continue;
   }
   if(['historico'].includes(normalized))continue; // log de eventos existente permanece intacto
-  const target=known.get(normalized)||header.trim();
+  const canonical=importFieldAliases[normalized]||normalized;
+  const target=known.get(canonical)||known.get(normalized)||header.trim();
   assign(existing,target,value);
-  for(const edKey of Object.keys(editable))if(importColumnKey(edKey)===normalized)assign(editable,edKey,value);
-  if(!known.has(normalized)){
-   known.set(normalized,target);p.data.activityTemplate=p.data.activityTemplate||[];
-   if(!p.data.activityTemplate.some(name=>importColumnKey(name)===normalized))p.data.activityTemplate.push(target);
+  for(const edKey of Object.keys(editable))if(importColumnKey(edKey)===canonical||importColumnKey(edKey)===normalized)assign(editable,edKey,value);
+  if(extras.has(canonical))assign(editable,target,value);
+  if(!known.has(canonical)){
+   known.set(canonical,target);p.data.activityTemplate=p.data.activityTemplate||[];
+   if(!p.data.activityTemplate.some(name=>importColumnKey(name)===canonical))p.data.activityTemplate.push(target);
   }
  }
  return changed;
@@ -503,7 +565,7 @@ function openAdminActivityEditor(){
   if(stagedUpdate){updatePreview.innerHTML=stagedUpdate.preview;bindUpdateActions()}
   body.querySelector('#updateActivitiesSpreadsheet').onchange=async e=>{
    const file=e.target.files?.[0];if(!file)return;stagedUpdate=null;updatePreview.innerHTML='<p>Lendo planilha e conferindo atividades…</p>';
-   try{const data=await readTabularFile(file),prepared=prepareActivitySpreadsheet(data,project(),'update');const preview=`<div class="import-summary"><b>${esc(file.name)}</b><span>${prepared.total} linha(s) · ${prepared.unique} ID(s) VGR único(s)</span><strong>${prepared.entries.length} atividade(s) encontrada(s) no projeto</strong><span>${prepared.notFound} não encontrada(s) · ${prepared.repeated} repetida(s) na planilha · ${prepared.missing} sem ID VGR</span></div><div class="import-preview-actions"><button type="button" id="confirmUpdatedActivities" class="import-confirm import-icon-button" title="Confirmar atualização" aria-label="Confirmar atualização" ${prepared.entries.length?'':'disabled'}>${importCheckIcon}</button><button type="button" id="discardUpdatedActivities" class="import-discard import-icon-button" title="Remover planilha selecionada" aria-label="Remover planilha selecionada">${importTrashIcon}</button></div>`;stagedUpdate={data,preview};updatePreview.innerHTML=preview;bindUpdateActions();
+   try{const data=await readTabularFile(file),prepared=prepareActivitySpreadsheet(data,project(),'update');const preview=`<div class="import-summary"><b>${esc(file.name)}</b>${data.sheetName?`<span>Aba identificada: ${esc(data.sheetName)}</span>`:''}<span>${prepared.total} linha(s) · ${prepared.unique} ID(s) VGR único(s)</span><strong>${prepared.entries.length} atividade(s) encontrada(s) no projeto</strong><span>${prepared.notFound} não encontrada(s) · ${prepared.repeated} movimentação(ões) repetida(s) consolidadas · ${prepared.missing} sem ID VGR</span></div><div class="import-preview-actions"><button type="button" id="confirmUpdatedActivities" class="import-confirm import-icon-button" title="Confirmar atualização" aria-label="Confirmar atualização" ${prepared.entries.length?'':'disabled'}>${importCheckIcon}</button><button type="button" id="discardUpdatedActivities" class="import-discard import-icon-button" title="Remover planilha selecionada" aria-label="Remover planilha selecionada">${importTrashIcon}</button></div>`;stagedUpdate={data,preview};updatePreview.innerHTML=preview;bindUpdateActions();
    }catch(err){updatePreview.innerHTML=`<p class="activity-import-error">Não foi possível preparar a atualização: ${esc(err.message)}</p>`}
   };
   const search=body.querySelector('.admin-activity-search');
@@ -795,11 +857,28 @@ async function validateUpload(file,category='spreadsheet'){
 }
 async function readTabularFile(file){
  const ext=await validateUpload(file),maxRows=5002,maxColumns=200;
- let matrix=[];
+ let matrix=[],sheetName='';
  if(['xls','xlsx','xlsm','ods'].includes(ext)){
    if(!window.XLSX)throw Error('Biblioteca de leitura de planilhas indisponível.');
-   const wb=XLSX.read(await file.arrayBuffer(),{type:'array',sheetRows:maxRows});
-   matrix=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:false});
+   const wb=XLSX.read(await file.arrayBuffer(),{type:'array',sheetRows:maxRows,cellDates:true});
+   const candidates=[];
+   for(const sheetName of wb.SheetNames){
+    const sheet=wb.Sheets[sheetName];if(!sheet?.['!ref'])continue;
+    const bounds=XLSX.utils.decode_range(sheet['!ref']);
+    // Alguns diários possuem formatação até a última coluna do Excel.
+    // Limitar a leitura às 200 primeiras colunas evita falsas falhas de tamanho.
+    const range=XLSX.utils.encode_range({s:{r:bounds.s.r,c:0},e:{r:Math.min(bounds.e.r,maxRows-1),c:Math.min(bounds.e.c,maxColumns-1)}});
+    const values=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:true,blankrows:false,range}).map(row=>row.map(importedCell));
+    const index=values.slice(0,40).findIndex(row=>importVgrHeader(row)&&row.filter(v=>String(v).trim()).length>=2);
+    if(index<0)continue;
+    const nonempty=values.slice(index+1).filter(row=>row.some(v=>String(v??'').trim()));
+    const idPosition=values[index].findIndex(h=>importVgrHeader([h]));
+    const validIds=nonempty.filter(row=>importVgrKey(row[idPosition])).length;
+    if(validIds)candidates.push({matrix:values.slice(index),validIds,sheetName});
+   }
+   if(!candidates.length)throw Error('Não foi encontrada uma aba com a coluna ID VGR e registros de atividades. Verifique as abas da planilha.');
+   candidates.sort((a,b)=>b.validIds-a.validIds);
+   matrix=candidates[0].matrix;sheetName=candidates[0].sheetName;
  }else if(ext==='docx'){
    if(!window.mammoth)throw Error('Biblioteca DOCX indisponível.');
    const result=await mammoth.convertToHtml({arrayBuffer:await file.arrayBuffer()});
@@ -816,11 +895,13 @@ async function readTabularFile(file){
    throw Error('Planilha com colunas ou campos excessivamente longos.');
  matrix=matrix.filter(r=>Array.isArray(r)&&r.some(v=>String(v??'').trim()));
  if(!matrix.length)throw Error('Arquivo vazio.');
- const headerRow=matrix.slice(0,15).findIndex(r=>r.some(h=>['idvgr','vgr','codigovgr','numerovgr','nrovgr'].includes(importColumnKey(h))));
+ const headerRow=matrix.slice(0,40).findIndex(r=>!!importVgrHeader(r));
  if(headerRow>0)matrix=matrix.slice(headerRow);
- const headers=matrix[0].map((h,i)=>String(h??'').trim()||`Campo ${i+1}`);
+ // Descarta colunas inteiramente vazias à direita, sem deslocar o ID VGR.
+ const lastUsedColumn=matrix.reduce((max,row)=>Math.max(max,row.findLastIndex(v=>String(v??'').trim())),0);
+ const headers=matrix[0].slice(0,lastUsedColumn+1).map((h,i)=>String(h??'').trim()||`Campo ${i+1}`);
  const rows=matrix.slice(1).map(r=>Object.fromEntries(headers.map((h,i)=>[h,String(r[i]??'').trim()])));
- return {headers,rows};
+ return {headers,rows,sheetName};
 }
 function parseCSV(t){let out=[],row=[],cell='',q=false;for(let i=0;i<t.length;i++){let c=t[i];if(c==='"'&&q&&t[i+1]==='"'){cell+='"';i++}else if(c==='"')q=!q;else if((c===','||c===';'||c==='\t')&&!q){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!q){if(c==='\r'&&t[i+1]==='\n')i++;row.push(cell);out.push(row);row=[];cell=''}else cell+=c}if(cell||row.length){row.push(cell);out.push(row)}return out}
 function downloadCSV(name,rows){
