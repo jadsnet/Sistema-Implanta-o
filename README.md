@@ -110,3 +110,14 @@ no editor; os arquivos gerados foram reabertos como planilhas Excel.
 - Em **Editar atividade**, o título **Atualizar atividades**, a explicação, o botão e a prévia ficam juntos na coluna da direita.
 - No modo claro, o cabeçalho **Editar atividade** tem roxo mais intenso e os textos auxiliares da edição são quase brancos, para melhorar a leitura.
 - No modo escuro, o cartão do título **Cadastrar nova atividade** ficou levemente mais claro, com sombra discreta.
+
+## Enviar informe (rascunho local)
+
+Na página de atividades, abra **Extrair relatório**, configure o período/filtro e os campos e clique em **Enviar informe**, à direita da opção de período. A nova tela é aberta sobre o relatório, na mesma aba.
+
+- **E-mail:** informe destinatários, CC, remetente e assunto; acrescente a mensagem e confira o painel por status. O remetente é sugerido automaticamente quando o usuário logado contém um e-mail válido. Quando o login é somente um nome, informe o endereço; a conta efetiva de envio será definida pelo programa de e-mail instalado.
+- **Fluxo de trabalho Teams:** informe a equipe, canal e o nome do fluxo. O mesmo painel de status e o mesmo relatório analítico são apresentados. É possível copiar o informe formatado e abrir o Teams para colar.
+- **Dados:** os totais dos cartões e as atividades da planilha são obtidos da mesma seleção de **Extrair relatório**. “Usar filtro da tela” respeita a listagem visível, a ordem e a pesquisa; os demais períodos usam os status e analistas marcados.
+- **Arquivo:** **Baixar planilha analítica** gera XLSX com cabeçalho roxo e histórico quando as bibliotecas do Excel estão disponíveis. Em modo offline sem as bibliotecas, baixa CSV, preservando as mesmas colunas e atividades.
+
+**Limitação importante:** o sistema ainda funciona somente no navegador, sem conta Microsoft 365 conectada. **Preparar rascunho** baixa a planilha e abre o aplicativo de e-mail com assunto, destinatários e resumo em texto; o usuário anexa a planilha e pode colar os cartões formatados via **Copiar informe formatado**. Em Teams, o conteúdo pode ser copiado e anexado manualmente. Nenhuma mensagem é enviada sem a ação do usuário no programa de destino. O envio direto com anexo e a publicação automática em um fluxo precisarão da futura integração autenticada com Microsoft 365/Teams.
