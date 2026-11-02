@@ -1699,3 +1699,37 @@ html:not([data-theme="light"]) .stats>.custom-filter-card .custom-filter-fields 
 html:not([data-theme="light"]) .admin-activity-dialog{background:#342344!important}
 html:not([data-theme="light"]) .admin-activity-header{background:#3b284d!important;box-shadow:5px 8px 18px rgba(5,0,16,.37)!important}
 html:not([data-theme="light"]) .admin-update-activities{background:transparent;box-shadow:none}
+
+/* Ajustes de posição e contraste da importação — revisão de novembro. */
+.admin-update-activities .admin-update-heading{
+  grid-column:2;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:12px;
+}
+.admin-update-activities .admin-update-heading>div{width:100%;min-width:0}
+.admin-update-activities .admin-update-heading h3{margin:0 0 7px;text-align:left}
+.admin-update-activities .admin-update-heading p{max-width:560px;margin:0;text-align:left}
+.admin-update-activities .admin-update-heading>.activity-import-file{align-self:flex-end}
+html:not([data-theme="light"]) .new-activity-overlay .new-activity-head{
+  background:#3d2950!important;
+  box-shadow:4px 8px 18px rgba(9,1,24,.30),inset 1px 1px 0 rgba(255,255,255,.065)!important;
+}
+html:not([data-theme="light"]) .new-activity-overlay .new-activity-head h2{color:#faf5ff!important}
+html[data-theme="light"] .admin-activity-header{
+  background:#694b83!important;
+  box-shadow:5px 9px 21px rgba(54,22,78,.32)!important;
+}
+html[data-theme="light"] .admin-activity-header h2{color:#fff!important}
+html[data-theme="light"] .admin-activity-header p{color:#f8f0ff!important}
+html[data-theme="light"] .admin-update-heading h3{color:#fff!important}
+html[data-theme="light"] .admin-update-heading p,
+html[data-theme="light"] .admin-activity-content .small.muted,
+html[data-theme="light"] .admin-activity-content>p.small,
+html[data-theme="light"] .admin-activity-content .admin-search-heading .small{
+  color:#f5eaff!important;
+}
+@media(max-width:750px){
+  .admin-update-activities .admin-update-heading{grid-column:1}
+}

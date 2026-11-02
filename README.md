@@ -104,3 +104,9 @@ no editor; os arquivos gerados foram reabertos como planilhas Excel.
 - **Editar atividade → Atualizar atividades:** título e instruções permanecem à esquerda, sem cartão externo; o botão e a prévia ficam alinhados ao canto direito.
 - Quando uma planilha está selecionada, aparecem dois botões quadrados com ícones: **visto** para confirmar e **lixeira** para cancelar a seleção. A lixeira não apaga atividades nem desfaz importações já concluídas.
 - No modo claro, as prévias usam um roxo de maior contraste para facilitar a leitura.
+
+### Refinamento de alinhamento e temas
+
+- Em **Editar atividade**, o título **Atualizar atividades**, a explicação, o botão e a prévia ficam juntos na coluna da direita.
+- No modo claro, o cabeçalho **Editar atividade** tem roxo mais intenso e os textos auxiliares da edição são quase brancos, para melhorar a leitura.
+- No modo escuro, o cartão do título **Cadastrar nova atividade** ficou levemente mais claro, com sombra discreta.
