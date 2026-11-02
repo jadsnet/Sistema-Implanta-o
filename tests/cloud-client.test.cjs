@@ -61,6 +61,12 @@ vm.runInNewContext(source,ctx,{filename:'supabase-client.js'});
  assert.throws(()=>cloud.assertEmail('atacante@externo.com'),/@telefonica.com/);
  const db=await cloud.loadAll();
  assert.equal(db.projects.length,1);assert.equal(db.activities.length,1);
+ assert.equal(cloud.userOwnsActivity({data:{analystName:'ÁNA  SILVA'}}),true,
+   'normalizar acentos, caixa e espaços ao exibir atividades importadas');
+ assert.equal(cloud.userOwnsActivity({data:{analystName:'Outra Analista'}}),false);
+ assert.equal(cloud.userOwnsActivity({ownerId:'00000000-0000-4000-8000-000000000002',data:{analystName:'Ana Silva'}}),false,
+   'owner_id determinado pelo servidor prevalece sobre igualdade do nome');
+ assert.equal(cloud.userOwnsActivity({ownerId:user.id,data:{analystName:'Nome Antigo'}}),true);
  db.activities[0].data.row.HOSTNAME='Matriz';
  cloud.queueSave(db);await cloud.flush();
  assert.equal(calls.length,1);assert.equal(calls[0][0].op,'update');

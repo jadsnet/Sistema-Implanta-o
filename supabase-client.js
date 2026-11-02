@@ -13,6 +13,15 @@
  function assertEmail(email){if(!/^[a-zA-Z0-9._%+\-]+@telefonica\.com$/i.test(String(email||'').trim()))
    throw new Error('É obrigatório usar um e-mail @telefonica.com.');return email.trim().toLowerCase();}
  function displayName(){return profile?.full_name?.trim()||profile?.email||'Usuário';}
+ const nameKey=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+ function userOwnsActivity(activity){
+   if(!profile?.active||profile.must_change_password||!session?.id||!activity)return false;
+   if(activity.ownerId)return activity.ownerId===session.id;
+   // Apenas para apresentar o botão de edição. A vinculação e a autorização
+   // efetivas são feitas por funções do PostgreSQL, inclusive em caso de homônimos.
+   const imported=nameKey(activity.data?.analystName);
+   return !!imported&&imported===nameKey(profile.full_name);
+ }
  function role(){return profile?.active&&!profile?.must_change_password?profile.role:null;}
  async function initialize(){
    if(!configured())throw Error('Falta configurar a URL e a chave publishable do Supabase em supabase-config.js.');
@@ -74,10 +83,10 @@
  }
  async function loadAll(){
    if(!role())throw Error('Sua conta precisa ser habilitada por um administrador e concluir a troca de senha.');
-   const records=await queryAll('gi_records','kind,id,data,version');
+   const records=await queryAll('gi_records','kind,id,data,version,owner_id');
    const next=empty(),nextBase=new Map();
    for(const r of records){if(!kinds.includes(r.kind))continue;
-     const entity={id:r.id,data:r.data||{}};next[r.kind].push(entity);
+     const entity={id:r.id,data:r.data||{},ownerId:r.owner_id||null};next[r.kind].push(entity);
      nextBase.set(byKey(r.kind,r.id),{version:r.version,json:JSON.stringify(entity.data)});
    }
    const audit=await client.from('gi_audit').select('*').order('happened_at',{ascending:false}).limit(500);
@@ -152,7 +161,18 @@
    const {data,error}=await client.functions.invoke('gi-users',{body:{action,...payload}});
    if(error)throw new Error(error.message||'Falha no serviço de usuários');
    if(data?.error)throw Error(data.error);
+   if(action==='invite'){
+     const {data:linked,error:linkError}=await client.rpc('gi_reconcile_imported_analysts');
+     if(linkError)return {...data,warning:'Convite enviado; execute supabase/03_vinculo_analistas.sql para vincular os nomes automaticamente.'};
+     return {...data,linked};
+   }
    return data;
+ }
+ async function reconcileImportedAnalysts(){
+   if(role()!=='administrador')throw Error('Somente administrador vincula analistas.');
+   const {data,error}=await assertClient().rpc('gi_reconcile_imported_analysts');
+   if(error)throw Error('Aplique supabase/03_vinculo_analistas.sql. '+error.message);
+   return Number(data||0);
  }
  function storagePath(key){
    const stringKey=String(key||'');
@@ -186,7 +206,7 @@
    if(error||!data?.ok)throw Error(data?.error||error?.message||'Exclusão recusada pelo servidor');
  }
  window.GICloud={configured,initialize,getProfile,signIn,signOut,resetPassword,changePassword,
-   loadAll,queueSave,flush,waitForSaves,adminUsers,assertEmail,displayName,role,
+   loadAll,queueSave,flush,waitForSaves,adminUsers,reconcileImportedAnalysts,userOwnsActivity,assertEmail,displayName,role,
    filePut,fileGet,fileRemove,client:()=>client,profile:()=>profile};
  window.addEventListener('beforeunload',event=>{if(dirty||working){event.preventDefault();event.returnValue='';}});
 })();

@@ -70,6 +70,27 @@ context.XLSX={read(){return workbook},utils:{
  const empty=context.prepareActivitySpreadsheet({headers:['ID VGR','TKT NOC'],rows:[{'ID VGR':'2262813','TKT NOC':''}]},project,'update');
  assert.equal(context.commitUpdatedActivitySpreadsheet(project,empty).updated,0,'célula vazia não deve apagar dados');
  assert.equal(activities[0].data.row.REPARO,'1696060');
+ const absent=context.prepareActivitySpreadsheet({headers:['ID VGR','STATUS SDWAN','DATA SDWAN','PARCEIRO','ANALISTA TÉCNICO'],rows:[
+   {'ID VGR':'2264093','STATUS SDWAN':'Migrado','DATA SDWAN':'19/10/26','PARCEIRO':'DELFIA','ANALISTA TÉCNICO':'JOÃO DA SILVA'},
+   {'ID VGR':'2264093','STATUS SDWAN':'Sem Acionamento','DATA SDWAN':'19/10/26'},
+   {'ID VGR':'2268708','STATUS SDWAN':'Migrado','DATA SDWAN':'21/10/26','PARCEIRO':'VIVO'},
+   {'ID VGR':'2268708','STATUS SDWAN':'Sem Acionamento','DATA SDWAN':'22/10/26'},
+   {'ID VGR':'2269999','STATUS SDWAN':'Migrado','DATA SDWAN':'22/10/26'}
+ ]},project,'update');
+ assert.equal(absent.unique,3);
+ assert.equal(absent.notFound,3,'IDs ausentes devem ser identificados na prévia');
+ assert.equal(absent.entries.length,3,'IDs ausentes não podem ser descartados');
+ assert.equal(absent.migrated,3,'Sem Acionamento posterior não desfaz uma migração');
+ const inserted=context.commitUpdatedActivitySpreadsheet(project,absent);
+ assert.equal(inserted.created,3,'deve cadastrar todos os IDs ausentes');
+ assert.equal(activities.length,5);
+ assert.ok(activities.slice(2).every(a=>a.data.status==='Migrada'));
+ assert.equal(activities[2].data.ed.Parceiro,'DELFIA');
+ assert.equal(activities[2].data.analystName,'JOÃO DA SILVA');
+ const repeated=context.prepareActivitySpreadsheet({headers:['ID VGR','STATUS SDWAN'],rows:[{'ID VGR':'2264093','STATUS SDWAN':'Migrado'}]},project,'update');
+ assert.equal(repeated.notFound,0,'reimportação não deve tentar recriar um ID já cadastrado');
+ assert.equal(context.commitUpdatedActivitySpreadsheet(project,repeated).created,0);
+ assert.equal(activities.length,5,'reimportação não deve duplicar atividades');
  if(process.env.GI_TEST_WORKBOOK){
   const script=`import json,sys,openpyxl,datetime\nw=openpyxl.load_workbook(sys.argv[1],read_only=True,data_only=True)\nr=[]\nfor sh in w.worksheets:\n rows=[]\n for row in sh.iter_rows(max_col=min(sh.max_column,200),values_only=True):\n  rows.append([v.isoformat(sep=' ') if isinstance(v,datetime.datetime) else v.isoformat() if isinstance(v,(datetime.date,datetime.time)) else str(v) if v is not None else '' for v in row])\n r.append({'name':sh.title,'rows':rows})\nprint(json.dumps(r,ensure_ascii=False))`;
   const output=spawnSync('python3',['-c',script,process.env.GI_TEST_WORKBOOK],{encoding:'utf8',maxBuffer:8*1024*1024});
@@ -83,10 +104,16 @@ context.XLSX={read(){return workbook},utils:{
   assert.equal(realData.rows.length,752,'linhas da planilha enviada');
   assert.equal(realPrepared.unique,500,'IDs distintos da planilha enviada');
   assert.equal(realPrepared.repeated,252,'movimentações repetidas consolidadas');
+  assert.equal(realPrepared.migrated,355,'deve haver 355 IDs migrados, sem rebaixamento para Pendente');
+  assert.equal(realPrepared.entries.length,500,'deve preparar todos os IDs, encontrados ou não');
+  for(const vgr of ['2264093','2268708']){
+   const row=realPrepared.entries.find(entry=>entry.key===vgr);
+   assert.equal(context.importedStatus(row.row['STATUS SDWAN']),'Migrada',`ID ${vgr} não deve ser rebaixado`);
+  }
   const realEntry=realPrepared.entries.find(entry=>entry.key==='2262813');
   assert.ok(realEntry,'ID que aparece várias vezes deve ser encontrado');
   assert.equal(context.importedStatus(realEntry.row['STATUS SDWAN']),'Migrada');
-  console.log('PASSOU: diário de bordo real com 752 linhas, 500 IDs VGR e 252 movimentações repetidas');
+  console.log('PASSOU: diário de bordo real com 752 linhas, 500 IDs VGR, 355 migradas e 252 movimentações repetidas');
  }
- console.log('PASSOU: seleção da aba com ID VGR, duplicatas por data, campos personalizados, aliases, datas, preservação de vazios e histórico');
+ console.log('PASSOU: seleção da aba, criação e reimportação dos IDs ausentes, migrações protegidas, campos personalizados, aliases, datas e histórico');
 })().catch(error=>{console.error(error);process.exitCode=1});
