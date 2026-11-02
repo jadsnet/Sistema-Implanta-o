@@ -97,7 +97,8 @@ declare
   referenced public.gi_records%rowtype;
   allowed_status text[] := array['Pendente','Em andamento','Contatando técnico','Iniciando configuração',
        'Finalizando configuração','Aguardando cliente config Fortinet','Organização de Rack e equipamentos',
-       'Migrada','Quebra','Abandonada'];
+       'Migrada','Quebra','Quebra Cliente','Quebra Delfia','Quebra Duplicidade',
+       'Quebra link','Quebra Vivo Redes','Abandonada'];
 begin
   if actor is null or not private.gi_active() then raise exception 'Conta sem autorização'; end if;
   if tg_op='DELETE' then
@@ -134,7 +135,8 @@ begin
         if new.data->>'status'='Pendente' and nullif(new.data->>'analystName','') is not null then
           raise exception 'Para abandonar, é necessário liberar a atividade';
         end if;
-        if new.data->>'status' in ('Migrada','Quebra') and nullif(new.data->>'endAt','') is null then
+        if new.data->>'status' in ('Migrada','Quebra','Quebra Cliente','Quebra Delfia',
+             'Quebra Duplicidade','Quebra link','Quebra Vivo Redes') and nullif(new.data->>'endAt','') is null then
           raise exception 'Conclusão exige data de término';
         end if;
         select coalesce(nullif(p.full_name,''),p.email) into caller_name

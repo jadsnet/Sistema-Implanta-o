@@ -21,6 +21,7 @@ const activities=[
  item('07','Migrada','BRUNO COSTA SILVERIO','104'), // ID repetido não soma duas vezes.
  item('08','Pendente','Cesar Soares','106'),
  item('09','Migrada',null,'107'),
+ {...item('10','Migrada','JANAINA DA SILVA BENEDITO','108'),data:{projectId:'copasa',row:{'ID VGR':'108'},status:'Migrada',analystName:'JANAINA DA SILVA BENEDITO',importBreakEvents:[{id:'2026-10-15|Quebra Cliente|JANAINA DA SILVA BENEDITO',status:'Quebra Cliente',analyst:'JANAINA DA SILVA BENEDITO'},{id:'2026-10-16|Quebra Link|JANAINA DA SILVA BENEDITO',status:'Quebra link',analyst:'JANAINA DA SILVA BENEDITO'}]}},
 ];
 const host={hidden:false,innerHTML:''};
 const context={
@@ -33,21 +34,25 @@ const context={
 vm.createContext(context);
 vm.runInContext(snippet,context,{filename:'app.js'});
 const ranking=context.calculateActivityRanking(activities);
-assert.equal(ranking.length,4,'agrupar aliases e ignorar pendentes/sem analista');
+assert.equal(ranking.length,5,'agrupar aliases e ignorar pendentes/sem analista');
 assert.equal(ranking[0].fullName,'CESAR SOARES');
 assert.equal(ranking[0].migradas,2);assert.equal(ranking[0].quebradas,0);
 assert.equal(ranking[1].label,'BRUNO COSTA','nome e sobrenome distinguem os Brunos');
 assert.equal(ranking[1].migradas,1);assert.equal(ranking[1].quebradas,0);
 assert.equal(ranking[2].label,'JADSON RODRIGUES');
 assert.equal(ranking[2].migradas,1);assert.equal(ranking[2].quebradas,1);
-assert.equal(ranking[3].label,'BRUNO NEVES');
-assert.equal(ranking[3].migradas,0);assert.equal(ranking[3].quebradas,1);
+const brunoNeves=ranking.find(r=>r.fullName==='BRUNO NEVES');
+assert.equal(brunoNeves.label,'BRUNO NEVES');
+assert.equal(brunoNeves.migradas,0);assert.equal(brunoNeves.quebradas,1);
+const janaina=ranking.find(r=>r.fullName==='JANAINA DA SILVA BENEDITO');
+assert.equal(janaina.migradas,1);assert.equal(janaina.quebradas,2,'duas quebras anteriores devem contar mesmo após migrar');
 context.renderActivityRanking();
-assert.match(host.innerHTML,/Ranking dos analistas/);
+assert.match(app,/id="rankingDialogTitle">Ranking dos analistas/);
 assert.match(host.innerHTML,/Migradas/);assert.match(host.innerHTML,/Quebradas/);
 assert.equal((host.innerHTML.match(/🥇/g)||[]).length,1,'medalha só no primeiro lugar');
 assert.match(app,/id="toggleActivityRanking"/);
 assert.match(app,/id="activityRanking"/);
-assert.match(app,/rankingOpen=!rankingOpen/);
+assert.match(app,/className='ranking-overlay'/);
+assert.match(css,/backdrop-filter:blur/);
 assert.match(css,/\.ranking-grid\{display:grid/);
-console.log('PASSOU: botão Ranking, lista na tela, colunas, ordenação, aliases, ID único, nomes distintos e medalha do líder');
+console.log('PASSOU: Ranking em modal com fundo desfocado, eventos de quebra, ordenação, aliases e medalha do líder');

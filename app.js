@@ -1,6 +1,7 @@
 
 const $=s=>document.querySelector(s);let DB={},page='home',projectId=null,selectedActivity=null,adminTab='Projetos',filterStatus='Todos',customAnalyst='',customStatus='Todos',filterOwner='none';
 const statuses=['Pendente','Em andamento','Migrada','Quebra'];
+const breakStatuses=['Quebra Cliente','Quebra Delfia','Quebra Duplicidade','Quebra link','Quebra Vivo Redes'];
 const activeStatuses=['Contatando técnico','Iniciando configuração','Finalizando configuração','Aguardando cliente config Fortinet','Organização de Rack e equipamentos'];
 let dateFilter='today', selectedDate=new Date().toLocaleDateString('en-CA'), detailMode='view',homeListLimit=200,rankingOpen=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -59,6 +60,23 @@ function canonicalAnalystName(name){
  // Correção de alias confirmado pelo administrador: falta do S final.
  if(analystNameKey(value)==='ADRIANA SILVA ALVES DOS SANTO')return 'ADRIANA SILVA ALVES DOS SANTOS';
  return value;
+}
+function usableAnalystName(value){
+ const name=canonicalAnalystName(value),parts=name.split(/\s+/).filter(Boolean);
+ return name.length<=90&&parts.length>=1&&parts.length<=7&&parts.every(part=>/^[A-ZÀ-Ü-]+$/.test(part))?name:'';
+}
+function defaultProjectFieldSection(name){
+ const n=importColumnKey(name);
+ if(/^(reparo|tktnoc|ticketnoc|serialmx|serialnumber|idvgr|qtd|lote|unidade|network|networkparaclonar|hostname|modeloequipamento)$/.test(n)||/equip|serial|clonar|meraki/.test(n))return 'Equipamento';
+ if(/^(nomedotecnico|telefonedotecnico|nomedoresponsavelnolocal|telefonedoresponsavel)$/.test(n)||/tecnico|responsavel/.test(n))return 'Outras informações';
+ if(/endere|munic|cidade|coord|cep|empresa|fortinet/.test(n))return 'Localização / Unidade';
+ if(/link|dedicado|internet|velocidade|operadora|produto|meio|^lp$|atendimento/.test(n))return 'Link';
+ return 'Outras informações';
+}
+function projectFieldSection(p,name){
+ const normalized=importColumnKey(name),extra=(p?.data?.extraFields||[]).find(x=>importColumnKey(typeof x==='string'?x:x.name)===normalized);
+ const section=extra?(typeof extra==='string'?'Outras informações':extra.section):(p?.data?.fieldSectionOverrides||{})[normalized]||defaultProjectFieldSection(name);
+ return section==='Localização'?'Localização / Unidade':section||'Outras informações';
 }
 function analystListName(name){
  const parts=canonicalAnalystName(name).split(/\s+/).filter(Boolean);
@@ -172,20 +190,20 @@ function runningActivityTime(a){return normStatus(a.data?.status)==='Em andament
 // Ranking informativo por atividade concluída. Usa o projeto inteiro,
 // independentemente da data, pesquisa ou cartão de status selecionado.
 function calculateActivityRanking(activities){
- const analysts=new Map(),seen=new Set();
+ const analysts=new Map(),seenMigrated=new Set(),seenBreaks=new Set();
+ const count=(name,type,key)=>{
+  const fullName=usableAnalystName(name);if(!fullName)return;
+  if(type==='quebradas'){if(seenBreaks.has(key))return;seenBreaks.add(key)}
+  const row=analysts.get(fullName)||{fullName,migradas:0,quebradas:0};row[type]++;analysts.set(fullName,row);
+ };
  for(const a of newestActivities(activities)){
-  const d=a.data||{},status=normStatus(d.status);
-  if(!['Migrada','Quebra'].includes(status))continue;
-  const fullName=canonicalAnalystName(d.analystName);
-  if(!fullName)continue;
-  const vgr=activityVgrKey(a);
-  const key=(d.projectId||'')+'|'+(vgr||a.id);
-  if(seen.has(key))continue;
-  seen.add(key);
-  const row=analysts.get(fullName)||{fullName,migradas:0,quebradas:0};
-  if(status==='Migrada')row.migradas++;
-  else row.quebradas++;
-  analysts.set(fullName,row);
+  const d=a.data||{},status=normStatus(d.status),key=(d.projectId||'')+'|'+(activityVgrKey(a)||a.id);
+  if(status==='Migrada'&&!seenMigrated.has(key)){seenMigrated.add(key);count(d.analystName,'migradas',key)}
+  const imported=Array.isArray(d.importBreakEvents)?d.importBreakEvents:[];
+  for(const event of imported)if(normStatus(event.status)==='Quebra')count(event.analyst,'quebradas',key+'|planilha|'+event.id);
+  const historical=(d.history||[]).filter(h=>normStatus(h.status)==='Quebra');
+  for(const [i,event] of historical.entries())count(event.analyst,'quebradas',key+'|historico|'+(event.at||i)+'|'+event.status);
+  if(status==='Quebra'&&!imported.length&&!historical.length)count(d.analystName,'quebradas',key+'|atual');
  }
  const ranked=[...analysts.values()].sort((a,b)=>
   b.migradas-a.migradas||a.quebradas-b.quebradas||a.fullName.localeCompare(b.fullName,'pt-BR'));
@@ -196,13 +214,26 @@ function calculateActivityRanking(activities){
 function renderActivityRanking(){
  const host=$('#activityRanking');if(!host||host.hidden)return;
  const rows=calculateActivityRanking(projectActivities());
- host.innerHTML=`<div class="ranking-title"><h4>Ranking dos analistas</h4><span>Todo o projeto · ordem por migrações, com menos quebras no desempate</span></div>
+ host.innerHTML=`<div class="ranking-title"><span>Todo o projeto · ordem por migrações, com menos quebras no desempate</span></div>
  <div class="ranking-grid ranking-labels"><span class="ranking-name-heading">Analista</span><span>Migradas</span><span>Quebradas</span><span></span></div>
  ${rows.length?rows.map((item,index)=>`<div class="ranking-grid ranking-line"><span class="ranking-person" title="${esc(item.fullName)}">${esc(item.label)}</span><span class="ranking-dotted" aria-hidden="true"></span><strong class="ranking-count">${item.migradas}</strong><strong class="ranking-count">${item.quebradas}</strong><span class="ranking-medal" ${index===0?'role="img" aria-label="Medalha de primeiro lugar" title="1º lugar"':''}>${index===0?'🥇':''}</span></div>`).join(''):'<p class="small muted">Nenhuma atividade migrada ou quebrada com analista informado.</p>'}`;
 }
+function openActivityRanking(){
+ if(document.querySelector('.ranking-overlay'))return;
+ rankingOpen=true;
+ const button=$('#toggleActivityRanking');button?.setAttribute('aria-expanded','true');button?.classList.add('active');
+ const layer=document.createElement('div');layer.className='ranking-overlay';
+ layer.innerHTML=`<div class="ranking-dialog" role="dialog" aria-modal="true" aria-labelledby="rankingDialogTitle"><header class="ranking-modal-header"><h2 id="rankingDialogTitle">Ranking dos analistas</h2><button type="button" class="ranking-modal-close" aria-label="Fechar ranking" title="Fechar">×</button></header><section id="activityRanking" class="activity-ranking" aria-label="Lista de analistas"></section></div>`;
+ document.body.appendChild(layer);
+ const close=()=>{layer.remove();rankingOpen=false;button?.setAttribute('aria-expanded','false');button?.classList.remove('active');button?.focus()};
+ layer.querySelector('.ranking-modal-close').onclick=close;
+ layer.onclick=e=>{if(e.target===layer)close()};
+ layer.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();close()}};
+ renderActivityRanking();layer.querySelector('.ranking-modal-close').focus();
+}
 const funnelIcon='<svg class="date-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>';
-function recordActivityHistory(a,status,notes){if(!a||!['Migrada','Quebra','Abandonada'].includes(status))return;const d=a.data;d.history=d.history||[];d.history.push({at:new Date().toISOString(),analyst:currentUser(),status:status||d.status||'Pendente',notes:String(notes||'')});save()}
-function renderHome(){let c=$('#appContent');if(!project()){c.innerHTML=`<div class="panel project-selection-panel"><h3>Selecione um projeto</h3><div class="grid project-selection-grid">${arr('projects').map(p=>`<div class="project" data-project="${esc(p.id)}"><div class="letter">${p.data?.profilePhoto?`<img src="${esc(p.data.profilePhoto)}" alt="Foto de ${esc(getName(p))}">`:esc(getName(p).slice(0,1))}</div><div class="project-selection-info"><b>${esc(getName(p))}</b><div class="sub small">${arr('activities').filter(a=>String((a.data.row||{}).EMPRESA||'').toLowerCase()===getName(p).toLowerCase()).length} atividades</div></div></div>`).join('')}</div></div>`;c.querySelectorAll('[data-project]').forEach(el=>el.onclick=()=>{projectId=el.dataset.project;selectedActivity=null;render()});return}if(selectedActivity){c.innerHTML=activityDetail(selectedActivity,detailMode);wireDetail();return}let acts=dateActivities(projectActivities());let counts=Object.fromEntries(statuses.map(s=>[s,acts.filter(a=>normStatus(a.data.status)===s).length]));c.innerHTML=`<div class="home-filters"><div class="date-buttons"><button class="${dateFilter==='today'?'active':''}" data-datefilter="today">Hoje</button><button class="${dateFilter==='other'?'active':''}" data-datefilter="other">Outro dia</button><button class="${dateFilter==='all'?'active':''}" data-datefilter="all">Total geral</button>${dateFilter==='other'?funnelIcon:''}<input type="date" id="otherDate" value="${esc(selectedDate)}" class="${dateFilter==='other'?'':'hidden'}" aria-label="Escolher data"></div></div><div class="stats">${statuses.map(s=>`<button type="button" class="stat stat-clickable ${filterOwner==='status'&&filterStatus===s?'selected':''}" data-statusfilter="${esc(s)}" aria-pressed="${filterOwner==='status'&&filterStatus===s}">${filterOwner==='status'&&filterStatus===s?`<svg class="stat-filter-watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>`:""}<div class="stat-emoji">${({'Pendente':'⏳','Em andamento':'📋','Migrada':'✅','Quebra':'⚠️'})[s] ? (()=>{const ic=({'Pendente':'⏳','Em andamento':'📋','Migrada':'✅','Quebra':'⚠️'})[s];return `<span class="e s" aria-hidden="true">${ic}</span><span class="e h" aria-hidden="true">${ic}</span><span class="fc" aria-hidden="true"><span class="e f">${ic}</span></span><span class="e d" aria-hidden="true">${ic}</span><span class="gl" aria-hidden="true"></span>`})() : ''}</div><span>${s==='Migrada'?'Migradas':s==='Pendente'?'Pendentes (projeto)':s==='Quebra'?'Quebradas':s}</span><b>${counts[s]}</b></button>`).join('')}<section class="custom-filter-card ${filterOwner==='custom' ? 'selected' : ''}"><h3>🔎 Filtragem customizada ${filterOwner==='custom'?`<svg class="custom-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>`:""}</h3><div class="custom-filter-fields"><label>Analista<input id="customAnalyst" list="customAnalystNames" placeholder="Todos os analistas" value="${esc(customAnalyst)}"><datalist id="customAnalystNames">${[...new Set(projectActivities().map(a=>canonicalAnalystName(a.data.analystName)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')).map(n=>`<option value="${esc(n)}"></option>`).join('')}</datalist></label><label>Status<select id="customStatus">${[['Todos','Todos os status'],['Pendente','Pendente'],['Em andamento','Em andamento'],['Contatando técnico','Contatando técnico'],['Iniciando configuração','Iniciando configuração'],['Finalizando configuração','Finalizando configuração'],['Aguardando cliente config Fortinet','Aguardando cliente config Fortinet'],['Organização de Rack e equipamentos','Organização de Rack e equipamentos'],['Migrada','Migradas'],['Quebra','Quebradas']].map(([v,t])=>`<option value="${esc(v)}" ${customStatus===v?'selected':''}>${t}</option>`).join('')}</select></label><button id="clearCustomFilter" class="secondary" type="button">Limpar</button></div><div class="small muted" id="customFilterCount"></div></section></div><div class="substats"><span>Contatando técnico: <b>${acts.filter(a=>a.data.status==='Contatando técnico').length}</b></span><span>Iniciando configuração: <b>${acts.filter(a=>a.data.status==='Iniciando configuração').length}</b></span><span>Finalizando configuração: <b>${acts.filter(a=>a.data.status==='Finalizando configuração').length}</b></span></div><section class="search-section"><div class="report-search-heading"><h3>Buscar atividade</h3><div class="report-heading-actions"><button type="button" class="report-trigger ranking-trigger ${rankingOpen?'active':''}" id="toggleActivityRanking" aria-controls="activityRanking" aria-expanded="${rankingOpen}" title="Mostrar ranking de analistas"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Z"/><path d="M8 5H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4M12 13v4m-4 4h8m-4-4v4"/></svg><span>Ranking</span></button><button type="button" class="report-trigger" id="openActivityReport" title="Escolher colunas e exportar relatório"><svg class="report-sheet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.5h10l4 4V21H5z"/><path d="M15 2.5V7h4M8 11h8M8 15h8M11 9v10"/></svg><span>Extrair relatório</span></button></div></div><section id="activityRanking" class="activity-ranking" aria-label="Ranking dos analistas" ${rankingOpen?'':'hidden'}></section><input id="searchActivity" value="${esc(localStorage.getItem('gi_search_'+(projectId||''))||'')}" placeholder="Buscar por ID, ID do link ou ID do VGR" style="width:100%;margin-bottom:12px"><div class="small muted" id="activityHint" aria-live="polite">Minhas atividades em andamento:</div><div id="activityList"></div></section>`;c.querySelectorAll('[data-datefilter]').forEach(b=>b.onclick=()=>{dateFilter=b.dataset.datefilter;filterOwner='none';filterStatus='Todos';customAnalyst='';customStatus='Todos';localStorage.removeItem('gi_search_'+(projectId||''));render()});$('#otherDate').onchange=e=>{selectedDate=e.target.value||new Date().toISOString().slice(0,10);dateFilter='other';filterOwner='none';filterStatus='Todos';customAnalyst='';customStatus='Todos';localStorage.removeItem('gi_search_'+(projectId||''));render()};c.querySelectorAll('[data-statusfilter]').forEach(b=>b.onclick=()=>{filterStatus=filterOwner==='status'&&filterStatus===b.dataset.statusfilter?'Todos':b.dataset.statusfilter;filterOwner=filterStatus==='Todos'?'none':'status';customAnalyst='';customStatus='Todos';localStorage.removeItem('gi_search_'+(projectId||''));render()});$('#customAnalyst').oninput=()=>{customAnalyst=$('#customAnalyst').value.trim();applyCustomFilterSelection()};$('#customStatus').onchange=()=>{customStatus=$('#customStatus').value;applyCustomFilterSelection()};$('#clearCustomFilter').onclick=()=>{customAnalyst='';customStatus='Todos';$('#customAnalyst').value='';$('#customStatus').value='Todos';filterOwner='none';updateFilterIndicators();renderActivityList()};$('#openActivityReport').onclick=openActivityReport;$('#toggleActivityRanking').onclick=()=>{rankingOpen=!rankingOpen;const button=$('#toggleActivityRanking'),panel=$('#activityRanking');button.classList.toggle('active',rankingOpen);button.setAttribute('aria-expanded',String(rankingOpen));panel.hidden=!rankingOpen;if(rankingOpen)renderActivityRanking()};$('#searchActivity').oninput=()=>{localStorage.setItem('gi_search_'+(projectId||''),$('#searchActivity').value);renderActivityList()};renderActivityList();if(rankingOpen)renderActivityRanking()}function elapsed(start){if(!start)return '';let sec=Math.max(0,Math.floor((Date.now()-new Date(start).getTime())/1000));if(!Number.isFinite(sec))return '';let h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),ss=sec%60;const time=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;return h>=24?`${new Date(start).toLocaleDateString('pt-BR')} · ${time}`:time}
+function recordActivityHistory(a,status,notes){if(!a||!['Migrada','Quebra','Abandonada'].includes(normStatus(status))&&status!=='Abandonada')return;const d=a.data;d.history=d.history||[];d.history.push({at:new Date().toISOString(),analyst:currentUser(),status:status||d.status||'Pendente',notes:String(notes||'')});save()}
+function renderHome(){let c=$('#appContent');if(!project()){c.innerHTML=`<div class="panel project-selection-panel"><h3>Selecione um projeto</h3><div class="grid project-selection-grid">${arr('projects').map(p=>`<div class="project" data-project="${esc(p.id)}"><div class="letter">${p.data?.profilePhoto?`<img src="${esc(p.data.profilePhoto)}" alt="Foto de ${esc(getName(p))}">`:esc(getName(p).slice(0,1))}</div><div class="project-selection-info"><b>${esc(getName(p))}</b><div class="sub small">${arr('activities').filter(a=>String((a.data.row||{}).EMPRESA||'').toLowerCase()===getName(p).toLowerCase()).length} atividades</div></div></div>`).join('')}</div></div>`;c.querySelectorAll('[data-project]').forEach(el=>el.onclick=()=>{projectId=el.dataset.project;selectedActivity=null;render()});return}if(selectedActivity){c.innerHTML=activityDetail(selectedActivity,detailMode);wireDetail();return}let acts=dateActivities(projectActivities());let counts=Object.fromEntries(statuses.map(s=>[s,acts.filter(a=>normStatus(a.data.status)===s).length]));c.innerHTML=`<div class="home-filters"><div class="date-buttons"><button class="${dateFilter==='today'?'active':''}" data-datefilter="today">Hoje</button><button class="${dateFilter==='other'?'active':''}" data-datefilter="other">Outro dia</button><button class="${dateFilter==='all'?'active':''}" data-datefilter="all">Total geral</button>${dateFilter==='other'?funnelIcon:''}<input type="date" id="otherDate" value="${esc(selectedDate)}" class="${dateFilter==='other'?'':'hidden'}" aria-label="Escolher data"></div></div><div class="stats">${statuses.map(s=>`<button type="button" class="stat stat-clickable ${filterOwner==='status'&&filterStatus===s?'selected':''}" data-statusfilter="${esc(s)}" aria-pressed="${filterOwner==='status'&&filterStatus===s}">${filterOwner==='status'&&filterStatus===s?`<svg class="stat-filter-watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>`:""}<div class="stat-emoji">${({'Pendente':'⏳','Em andamento':'📋','Migrada':'✅','Quebra':'⚠️'})[s] ? (()=>{const ic=({'Pendente':'⏳','Em andamento':'📋','Migrada':'✅','Quebra':'⚠️'})[s];return `<span class="e s" aria-hidden="true">${ic}</span><span class="e h" aria-hidden="true">${ic}</span><span class="fc" aria-hidden="true"><span class="e f">${ic}</span></span><span class="e d" aria-hidden="true">${ic}</span><span class="gl" aria-hidden="true"></span>`})() : ''}</div><span>${s==='Migrada'?'Migradas':s==='Pendente'?'Pendentes (projeto)':s==='Quebra'?'Quebradas':s}</span><b>${counts[s]}</b></button>`).join('')}<section class="custom-filter-card ${filterOwner==='custom' ? 'selected' : ''}"><h3>🔎 Filtragem customizada ${filterOwner==='custom'?`<svg class="custom-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>`:""}</h3><div class="custom-filter-fields"><label>Analista<input id="customAnalyst" list="customAnalystNames" placeholder="Todos os analistas" value="${esc(customAnalyst)}"><datalist id="customAnalystNames">${[...new Set(projectActivities().map(a=>canonicalAnalystName(a.data.analystName)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')).map(n=>`<option value="${esc(n)}"></option>`).join('')}</datalist></label><label>Status<select id="customStatus">${[['Todos','Todos os status'],['Pendente','Pendente'],['Em andamento','Em andamento'],['Contatando técnico','Contatando técnico'],['Iniciando configuração','Iniciando configuração'],['Finalizando configuração','Finalizando configuração'],['Aguardando cliente config Fortinet','Aguardando cliente config Fortinet'],['Organização de Rack e equipamentos','Organização de Rack e equipamentos'],['Migrada','Migradas'],['Quebra','Quebradas'],...breakStatuses.map(s=>[s,s])].map(([v,t])=>`<option value="${esc(v)}" ${customStatus===v?'selected':''}>${t}</option>`).join('')}</select></label><button id="clearCustomFilter" class="secondary" type="button">Limpar</button></div><div class="small muted" id="customFilterCount"></div></section></div><div class="substats"><span>Contatando técnico: <b>${acts.filter(a=>a.data.status==='Contatando técnico').length}</b></span><span>Iniciando configuração: <b>${acts.filter(a=>a.data.status==='Iniciando configuração').length}</b></span><span>Finalizando configuração: <b>${acts.filter(a=>a.data.status==='Finalizando configuração').length}</b></span></div><section class="search-section"><div class="report-search-heading"><h3>Buscar atividade</h3><div class="report-heading-actions"><button type="button" class="report-trigger ranking-trigger ${rankingOpen?'active':''}" id="toggleActivityRanking" aria-controls="activityRanking" aria-expanded="${rankingOpen}" title="Mostrar ranking de analistas"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Z"/><path d="M8 5H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4M12 13v4m-4 4h8m-4-4v4"/></svg><span>Ranking</span></button><button type="button" class="report-trigger" id="openActivityReport" title="Escolher colunas e exportar relatório"><svg class="report-sheet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.5h10l4 4V21H5z"/><path d="M15 2.5V7h4M8 11h8M8 15h8M11 9v10"/></svg><span>Extrair relatório</span></button></div></div><input id="searchActivity" value="${esc(localStorage.getItem('gi_search_'+(projectId||''))||'')}" placeholder="Buscar por ID, ID do link ou ID do VGR" style="width:100%;margin-bottom:12px"><div class="small muted" id="activityHint" aria-live="polite">Minhas atividades em andamento:</div><div id="activityList"></div></section>`;c.querySelectorAll('[data-datefilter]').forEach(b=>b.onclick=()=>{dateFilter=b.dataset.datefilter;filterOwner='none';filterStatus='Todos';customAnalyst='';customStatus='Todos';localStorage.removeItem('gi_search_'+(projectId||''));render()});$('#otherDate').onchange=e=>{selectedDate=e.target.value||new Date().toISOString().slice(0,10);dateFilter='other';filterOwner='none';filterStatus='Todos';customAnalyst='';customStatus='Todos';localStorage.removeItem('gi_search_'+(projectId||''));render()};c.querySelectorAll('[data-statusfilter]').forEach(b=>b.onclick=()=>{filterStatus=filterOwner==='status'&&filterStatus===b.dataset.statusfilter?'Todos':b.dataset.statusfilter;filterOwner=filterStatus==='Todos'?'none':'status';customAnalyst='';customStatus='Todos';localStorage.removeItem('gi_search_'+(projectId||''));render()});$('#customAnalyst').oninput=()=>{customAnalyst=$('#customAnalyst').value.trim();applyCustomFilterSelection()};$('#customStatus').onchange=()=>{customStatus=$('#customStatus').value;applyCustomFilterSelection()};$('#clearCustomFilter').onclick=()=>{customAnalyst='';customStatus='Todos';$('#customAnalyst').value='';$('#customStatus').value='Todos';filterOwner='none';updateFilterIndicators();renderActivityList()};$('#openActivityReport').onclick=openActivityReport;$('#toggleActivityRanking').onclick=openActivityRanking;$('#searchActivity').oninput=()=>{localStorage.setItem('gi_search_'+(projectId||''),$('#searchActivity').value);renderActivityList()};renderActivityList()}function elapsed(start){if(!start)return '';let sec=Math.max(0,Math.floor((Date.now()-new Date(start).getTime())/1000));if(!Number.isFinite(sec))return '';let h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),ss=sec%60;const time=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;return h>=24?`${new Date(start).toLocaleDateString('pt-BR')} · ${time}`:time}
 function adoptActivity(id){let a=arr('activities').find(x=>x.id===id);if(!a)return;let d=a.data;if(d.analystName&&!GICloud.userOwnsActivity(a)){toast('Atividade já atribuída a '+firstName(d.analystName));return}d.analystName=currentUser();d.analystId=currentUser();d.status='Contatando técnico';d.startAt=d.startAt||new Date().toISOString();d.endAt=null;recordActivityHistory(a,d.status,'Atividade adotada');log('Atividade adotada',activityName(a),a.id);save();toast('Atividade adotada por '+firstName(currentUser()));selectedActivity=id;detailMode='view';render()}
 function abandonActivity(id){
  const a=arr('activities').find(x=>x.id===id);
@@ -271,43 +302,28 @@ function activityDetail(id,mode='view',adminMode=false){
  const val=k=>{if(ed[k]!==undefined)return ed[k];if(r[k]!==undefined)return r[k];const original=Object.keys({...r,...ed}).find(name=>importColumnKey(name)===importColumnKey(k));return original?(ed[original]??r[original]??''):''};
  const canEdit=adminMode||GICloud.userOwnsActivity(a);
  const field=k=>`<div class="field"><label>${esc(k==='REPARO'?'REPARO (TIKET NOC - SAE)':k)}</label><input data-edit="${esc(k)}" value="${esc(val(k))}" ${k==='IP LINK'?'inputmode="decimal" placeholder="0.0.0.0/0" pattern="[0-9./]*"':''} ${canEdit?'':'readonly'}></div>`;
- const groups=[
- ['Equipamento',keys.filter(k=>k==='REPARO'||(k!=='IP LINK'&& !/velocidade/i.test(k)&&k!=='TIPO DE ATENDIMENTO'&&/equip|modelo|serial|qtd|quantidade|lote|host|network|rede|ip/i.test(k)))],
- ['Link',keys.filter(k=>k==='TIPO DE ATENDIMENTO'||(k!=='ID VGR'&&/dedicado|internet|\blp\b|velocidade|produto|meio|operadora|link/i.test(k)))],
- ['Localização',keys.filter(k=>/endere|munic|cidade|coord|uf|cep/i.test(k)&&!/velocidade/i.test(k))],
- ['Outras informações',keys.filter(k=>k!=='ID VGR'&&!/equip|modelo|serial|qtd|quantidade|lote|host|network|rede|ip|dedicado|internet|\blp\b|velocidade|produto|meio|operadora|link|endere|munic|cidade|coord|uf|cep|^(TIPO DE ATENDIMENTO|REPARO)$/i.test(k))]
- ];
- // Unidade e rede de clonagem pertencem à seção Equipamento, ao lado de NETWORK.
- const equipmentMove=['UNIDADE','NET WORK PARA CLONAR','NETWORK PARA CLONAR'];
- for(const g of groups)g[1]=g[1].filter(k=>!equipmentMove.includes(k.toUpperCase().trim()));
- const networkPosition=groups[0][1].findIndex(k=>k.toUpperCase().trim()==='NETWORK');
- const moved=keys.filter(k=>equipmentMove.includes(k.toUpperCase().trim()));
- groups[0][1].splice(networkPosition<0?groups[0][1].length:networkPosition+1,0,...moved);
- for(const x of extraDefinitions){for(const g of groups)g[1]=g[1].filter(k=>k!==x.name);let dest=groups.find(g=>g[0]===x.section)||groups[3];if(/velocidade do link/i.test(x.name))dest=groups[1];dest[1].push(x.name)}
- for(const g of groups)g[1]=g[1].filter(k=>!equipmentMove.includes(k.toUpperCase().trim()));groups[0][1].splice(groups[0][1].findIndex(k=>k.toUpperCase().trim()==='NETWORK')+1,0,...moved);
- const assignedFields=new Set();for(const g of [groups[1],groups[0],groups[2],groups[3]])g[1]=g[1].filter(k=>{if(assignedFields.has(k))return false;assignedFields.add(k);return true});
- // Apresentação unificada sem alterar as chaves de dados nem o cadastro de campos.
- groups[2][0]='Localização / Unidade';
- groups[2][1].push(...groups[3][1]);
- // Os quatro contatos ficam juntos na última linha da grade.
+ const sections=['Equipamento','Link','Localização / Unidade','Outras informações',...(project()?.data?.extraSections||[])].filter(x=>!(project()?.data?.removedDefaultSections||[]).includes(x));
+ const groups=sections.map(name=>[name,keys.filter(k=>projectFieldSection(project(),k)===name)]);
+ // Unidade e clonagem ficam ao lado de NETWORK somente se ainda estiverem em Equipamento.
+ const equipment=groups.find(g=>g[0]==='Equipamento');
+ if(equipment){const moved=equipment[1].filter(k=>['UNIDADE','NET WORK PARA CLONAR','NETWORK PARA CLONAR'].includes(k.toUpperCase().trim()));equipment[1]=equipment[1].filter(k=>!moved.includes(k));const n=equipment[1].findIndex(k=>k.toUpperCase().trim()==='NETWORK');equipment[1].splice(n<0?equipment[1].length:n+1,0,...moved)}
+ // Contatos permanecem agrupados no fim de sua seção, inclusive se movidos pelo administrador.
  const contactFields=['NOME DO TÉCNICO','TELEFONE DO TÉCNICO','NOME DO RESPONSÁVEL NO LOCAL','TELEFONE DO RESPONSÁVEL'];
- groups[2][1]=[...groups[2][1].filter(k=>!contactFields.includes(k)),...contactFields.filter(k=>groups[2][1].includes(k))];
- groups.splice(3,1);
- for(const section of (project()?.data?.extraSections||[])){if(!groups.some(g=>g[0]===section))groups.push([section,extraDefinitions.filter(f=>f.section===section).map(f=>f.name)])}
- const visibleGroups=groups.filter(g=>g[1].length&&!(project()?.data?.removedDefaultSections||[]).includes(g[0]));
- const finalStatus=['Migrada','Quebra'].includes(d.status);
- const activityStatusOptions=[...(d.status==='Pendente'?['Pendente']:[]),'Contatando técnico','Iniciando configuração','Finalizando configuração','Aguardando cliente config Fortinet','Organização de Rack e equipamentos','Migrada','Quebra'];
+ for(const g of groups)g[1]=[...g[1].filter(k=>!contactFields.includes(k)),...contactFields.filter(k=>g[1].includes(k))];
+ const visibleGroups=groups.filter(g=>g[1].length);
+ const finalStatus=['Migrada','Quebra'].includes(normStatus(d.status));
+ const activityStatusOptions=[...(d.status==='Pendente'?['Pendente']:[]),'Contatando técnico','Iniciando configuração','Finalizando configuração','Aguardando cliente config Fortinet','Organização de Rack e equipamentos','Migrada','Quebra',...breakStatuses];
  if(d.status&&!activityStatusOptions.includes(d.status))activityStatusOptions.unshift(d.status);
  return `<div class="activity-detail-screen"><div class="detailhead detail-toolbar"><button class="secondary" id="closeDetail">← ${adminMode?'Voltar à lista':'Voltar à busca'}</button><div class="admin-detail-toolbar-right"><span class="status ${esc(normStatus(d.status))}">${esc(d.status||'Pendente')}</span>${adminMode?`<button type="button" class="danger-project admin-delete-activity" id="adminDeleteActivity">Excluir atividade</button>`:''}</div></div>
  <section class="activity-summary"><div class="eyebrow">ID VGR</div><h2>${esc(activityName(a))}</h2><p class="muted">Analista: ${esc(canonicalAnalystName(d.analystName)||'—')}${normStatus(d.status)==='Em andamento'?` · Data: ${esc(d.startAt?new Date(d.startAt).toLocaleDateString('pt-BR'):'—')} · Início: ${esc(d.startAt?new Date(d.startAt).toLocaleTimeString('pt-BR'):'—')} · Tempo: ${esc(runningActivityTime(a)||'—')}`:completionLabel(a)?` · ${esc(completionLabel(a))}`:''}</p>
  <div class="activity-summary-layout"><div class="activity-summary-controls"><div class="field"><label>Status da atividade</label><select id="activityStatus" ${canEdit?'':'disabled'}>${activityStatusOptions.map(st=>`<option ${d.status===st?'selected':''} ${st==='Pendente'?'disabled':''}>${st}</option>`).join('')}</select></div>
  <div class="field activity-observations ${finalStatus?'':'hidden'}" id="activityObservationsWrap"><label for="activityObservations">Observações da atividade</label><textarea id="activityObservations" rows="3" placeholder="Registre observações, detalhes da migração ou motivo da quebra..." ${canEdit?'':'readonly'}>${esc(d.observations||'')}</textarea><span class="small muted">Campo para textos longos. Salvamento automático.</span></div>
  <div class="filters">${adminMode?'':(!d.analystName?`<button id="adoptActivity">Adotar atividade</button>`:canEdit&&!d.endAt?`<button class="danger" id="abandonActivity">Abandonar atividade</button>`:"")}</div></div>
- <div class="activity-history"><h3>Histórico</h3><div class="activity-history-list">${(d.history||[]).map((h,i)=>({...h,originalIndex:i})).filter(h=>['Migrada','Quebra','Abandonada'].includes(h.status)).map(h=>`<button type="button" class="history-link" data-history="${h.originalIndex}">${esc(new Date(h.at).toLocaleString('pt-BR'))} · ${esc(h.analyst||'—')} · ${esc(h.status||'—')}</button>`).join('')||'<span class="small muted">Nenhuma conclusão registrada nesta atividade.</span>'}</div></div>
+ <div class="activity-history"><h3>Histórico</h3><div class="activity-history-list">${(d.history||[]).map((h,i)=>({...h,originalIndex:i})).filter(h=>['Migrada','Quebra'].includes(normStatus(h.status))||h.status==='Abandonada').map(h=>`<button type="button" class="history-link" data-history="${h.originalIndex}">${esc(new Date(h.at).toLocaleString('pt-BR'))} · ${esc(h.analyst||'—')} · ${esc(h.status||'—')}</button>`).join('')||'<span class="small muted">Nenhuma conclusão registrada nesta atividade.</span>'}</div></div>
  ${canEdit&&!adminMode?`<div class="stamp-panel"><div class="stamp-panel-heading"><span>Carimbos</span></div><div class="stamp-actions"><button class="stamp-logo-btn" id="generateSaeStamp" title="Gerar carimbo SAE" aria-label="Gerar carimbo SAE"><img src="sae-button.png" alt="SAE"></button><button class="stamp-logo-btn" id="generateMerakiStamp" title="Gerar carimbo Meraki" aria-label="Gerar carimbo Meraki"><img src="meraki-button.png" alt="Cisco Meraki"></button></div></div>`:adminMode?'':'<p class="small muted">Somente o analista responsável pode editar esta atividade.</p>'}</div>
 
  <p class="small muted">${adminMode?'Alterações administrativas são salvas automaticamente e registradas no log.':'Alterações são salvas automaticamente neste navegador. Os carimbos são copiados para a área de transferência.'}</p></section>
- ${visibleGroups.map(g=>`<section class="info-section"><h3 class="floating-title">${esc(g[0])}</h3><div class="info-grid">${g[0]==='Localização / Unidade'?`<div class="location-main-fields">${g[1].filter(k=>!contactFields.includes(k)).map(field).join('')}</div><div class="location-contact-fields">${contactFields.filter(k=>g[1].includes(k)).map(field).join('')}</div>`:g[1].map(field).join('')}</div></section>`).join('')}</div>`;
+ ${visibleGroups.map(g=>`<section class="info-section"><h3 class="floating-title">${esc(g[0])}</h3><div class="info-grid">${g[0]==='Localização / Unidade'||g[0]==='Outras informações'?`<div class="location-main-fields">${g[1].filter(k=>!contactFields.includes(k)).map(field).join('')}</div><div class="location-contact-fields">${contactFields.filter(k=>g[1].includes(k)).map(field).join('')}</div>`:g[1].map(field).join('')}</div></section>`).join('')}</div>`;
 }
 function wireDetail(){
  if(!$('.activity-detail-screen'))return;
@@ -319,7 +335,7 @@ function wireDetail(){
   if(!GICloud.userOwnsActivity(a))return;
   if(!a.data.ed)a.data.ed={};
   document.querySelectorAll('[data-edit]').forEach(el=>a.data.ed[el.dataset.edit]=el.value);
-  const notes=$('#activityObservations');if(notes){a.data.observations=notes.value;const history=a.data.history||[];const last=history[history.length-1];if(last&&['Migrada','Quebra'].includes(last.status)&&last.status===a.data.status&&last.analyst===currentUser())last.notes=notes.value;}
+  const notes=$('#activityObservations');if(notes){a.data.observations=notes.value;const history=a.data.history||[];const last=history[history.length-1];if(last&&['Migrada','Quebra'].includes(normStatus(last.status))&&last.status===a.data.status&&last.analyst===currentUser())last.notes=notes.value;}
   save();
  };
  document.querySelectorAll('[data-edit]').forEach(el=>{
@@ -331,8 +347,8 @@ function wireDetail(){
   if(!GICloud.userOwnsActivity(a))return;
   persist();const next=$('#activityStatus').value,prev=a.data.status;
   a.data.status=next;
-  if(['Migrada','Quebra'].includes(next)&&!a.data.endAt)a.data.endAt=new Date().toISOString();
-  if(!['Migrada','Quebra'].includes(next)&&['Migrada','Quebra'].includes(prev))a.data.endAt=null;
+  if(['Migrada','Quebra'].includes(normStatus(next))&&!a.data.endAt)a.data.endAt=new Date().toISOString();
+  if(!['Migrada','Quebra'].includes(normStatus(next))&&['Migrada','Quebra'].includes(normStatus(prev)))a.data.endAt=null;
   recordActivityHistory(a,next,a.data.observations||'');save();log('Status atualizado',next,a.id);toast('Status salvo automaticamente');render();
  });
  document.querySelectorAll('[data-history]').forEach(btn=>btn.addEventListener('click',()=>{const h=(a.data.history||[])[Number(btn.dataset.history)];if(!h)return;const overlay=document.createElement('div');overlay.className='history-overlay';overlay.innerHTML=`<div class="history-dialog" role="dialog" aria-modal="true"><h2>Histórico da atividade</h2><p>${esc(new Date(h.at).toLocaleString('pt-BR'))} · ${esc(h.analyst)} · ${esc(h.status)}</p><label>Observações registradas</label><div class="history-notes">${esc(h.notes||'Nenhuma observação registrada nesta movimentação.')}</div><button type="button" class="secondary" id="closeHistory">Fechar</button></div>`;document.body.appendChild(overlay);overlay.querySelector('#closeHistory').onclick=()=>overlay.remove();overlay.onclick=e=>{if(e.target===overlay)overlay.remove()}}));
@@ -476,6 +492,16 @@ function prepareActivitySpreadsheet(data,p,mode){
   // O mesmo ID pode ter várias movimentações; usa a mais recente para status,
   // mantendo os campos preenchidos em movimentações anteriores.
   const row={};group.sort((a,b)=>a.order-b.order||a.index-b.index);
+  const statusKey=Object.keys(group[0].row).find(h=>['statussdwan','status','statusdaatividade'].includes(importColumnKey(h)));
+  const analystKey=Object.keys(group[0].row).find(h=>['analista','analistatecnico','analistadaatividade','nomedoanalista','nomedoanalistadaatividade','responsavelpelaatividade','analistaresponsavel'].includes(importColumnKey(h)));
+  const events=new Map();
+  for(const item of group){
+   const status=importedStatus(item.row[statusKey]);if(normStatus(status)!=='Quebra')continue;
+   const analyst=usableAnalystName(item.row[analystKey]);const day=importedMovementDate(item.row);
+   const eventKey=[day||`linha-${item.index}`,status,analyst].join('|');
+   if(!events.has(eventKey))events.set(eventKey,{id:eventKey,status,analyst,at:day||'',source:'planilha'});
+  }
+  row.__importBreakEvents=[...events.values()];
   for(const item of group)for(const [header,value] of Object.entries(item.row))if(String(value??'').trim()){
    row[header]=value;
    const field=importColumnKey(header);
@@ -497,10 +523,12 @@ function prepareActivitySpreadsheet(data,p,mode){
 }
 function importedStatus(value){
  const key=importColumnKey(value);
- const exact=[...activeStatuses,'Pendente','Migrada','Quebra','Abandonada'].find(s=>importColumnKey(s)===key);
+ const exact=[...activeStatuses,'Pendente','Migrada','Quebra','Abandonada',...breakStatuses].find(s=>importColumnKey(s)===key);
  if(exact)return exact;
  if(['migrado','migrados','migradas','concluida','concluido','concluidas','concluidos'].includes(key))return 'Migrada';
- if(['quebrada','quebradas','quebrado','quebrados','quebra'].includes(key)||key.startsWith('quebra'))return 'Quebra';
+ if(key==='duplicidade')return 'Quebra Duplicidade';
+ if(['quebrada','quebradas','quebrado','quebrados','quebra'].includes(key))return 'Quebra';
+ if(key.startsWith('quebra'))return breakStatuses.find(s=>importColumnKey(s)===key)||'Quebra';
  if(['semacionamento','agendado','agendada','naoiniciado','naoiniciada'].includes(key))return 'Pendente';
  if(['emandamento','andamento'].includes(key))return 'Em andamento';
  if(['abandonaratividade','abandonado'].includes(key))return 'Abandonada';
@@ -523,6 +551,12 @@ function mergeImportedActivityFields(a,row,p,idHeader){
  const dateContext=importedMovementDate(row);
  let changed=false;
  const assign=(target,key,value)=>{if(target[key]!==value){target[key]=value;changed=true}};
+ if(Array.isArray(row.__importBreakEvents)){
+  const combined=new Map((data.importBreakEvents||[]).filter(e=>e&&e.id).map(e=>[e.id,e]));
+  for(const event of row.__importBreakEvents)combined.set(event.id,event);
+  const all=[...combined.values()];
+  if(JSON.stringify(data.importBreakEvents||[])!==JSON.stringify(all))assign(data,'importBreakEvents',all);
+ }
  for(const [header,raw] of Object.entries(row)){
   if(header.startsWith('__import'))continue;
   const value=String(raw??'').trim();if(!value||header===idHeader)continue; // vazios não apagam dados atuais
@@ -531,7 +565,7 @@ function mergeImportedActivityFields(a,row,p,idHeader){
    const next=importedStatus(value);if(next)assign(data,'status',next);continue;
   }
   if(['analista','analistatecnico','analistadaatividade','nomedoanalista','nomedoanalistadaatividade','responsavelpelaatividade','analistaresponsavel'].includes(normalized)){
-   const unifiedName=canonicalAnalystName(value);
+   const unifiedName=usableAnalystName(value);if(!unifiedName)continue;
    assign(data,'analystName',unifiedName);assign(data,'analystId',unifiedName);continue;
   }
   if(['observacao','observacoes','observacoesdaatividade','motivo'].includes(normalized)){
@@ -560,7 +594,7 @@ function commitNewActivitySpreadsheet(p,data,prepared){
  const batch='batch_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),created=[];
  const templateBefore=[...(p.data.activityTemplate||[])];
  for(const {row} of prepared.entries){
-  const fields={};for(const [header,value] of Object.entries(row))fields[header]=String(value??'').trim();
+  const fields={};for(const [header,value] of Object.entries(row))fields[header]=header==='__importBreakEvents'?value:String(value??'').trim();
   fields['ID VGR']=String(row[prepared.idHeader]).trim();
   const activity={id:'imp_'+Date.now()+'_'+created.length+'_'+Math.random().toString(36).slice(2,7),data:{projectId:p.id,row:{'ID VGR':fields['ID VGR']},status:'Pendente',analystName:null,analystId:null,startAt:null,endAt:null,importBatch:batch,createdAt:new Date().toISOString()}};
   mergeImportedActivityFields(activity,fields,p,prepared.idHeader);
@@ -609,7 +643,7 @@ function openNewActivityDialog(p){
  const sample=projectActivities().find(a=>a.data.projectId===p.id)||projectActivities()[0];
  const names=allProjectFieldNames(p);
  const sections=['Equipamento','Link','Localização / Unidade','Outras informações',...(p.data.extraSections||[])].filter(x=>!(p.data.removedDefaultSections||[]).includes(x));
- const group=k=>{const e=extras.find(f=>f.name===k);if(e)return e.section==='Localização'?'Localização / Unidade':e.section;const n=k.toUpperCase();if(/TÉCNICO|RESPONSÁVEL/.test(n))return 'Outras informações';if(/ENDEREÇO|COORDENADAS|EMPRESA|FORTINET|MUNICIPIO|MUNICÍPIO/.test(n))return 'Localização / Unidade';if(/UNIDADE|CLONAR/.test(n))return 'Equipamento';if(/LINK|DEDICADO|INTERNET|VELOCIDADE|OPERADORA|PRODUTO|MEIOS|^LP$|ATENDIMENTO/.test(n))return 'Link';return 'Equipamento'};
+ const group=k=>projectFieldSection(p,k);
  const overlay=document.createElement('div');overlay.className='history-overlay new-activity-overlay';
  overlay.innerHTML=`<div class="history-dialog new-activity-dialog" role="dialog" aria-modal="true" aria-label="Cadastrar nova atividade"><div class="new-activity-head"><h2>Cadastrar nova atividade</h2><button type="button" class="new-activity-close" id="cancelNewActivity" aria-label="Fechar formulário" title="Fechar"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6L18 18M18 6L6 18"/></svg></button></div><div class="new-activity-import-area"><label class="activity-import-file">${importSheetIcon} Importar planilha<input type="file" id="newActivitySpreadsheet" accept=".csv,.tsv,.txt,.xls,.xlsx,.xlsm,.ods"></label><div class="activity-import-preview" id="newActivityImportPreview" aria-live="polite"></div></div><form id="newActivityForm">${sections.map(section=>{const keys=names.filter(k=>group(k)===section);if(!keys.length)return '';return `<section class="new-activity-section"><h3 class="new-activity-section-title">${esc(section)}</h3><div class="new-activity-grid">${keys.map(k=>`<label class="field"><span>${esc(k)}</span><input data-newfield="${esc(k)}" placeholder=""></label>`).join('')}</div></section>`}).join('')}<div class="new-activity-footer"><button type="submit">Cadastrar atividade</button></div></form></div>`;
  document.body.appendChild(overlay);overlay.querySelector('#cancelNewActivity').onclick=()=>overlay.remove();overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};
@@ -710,7 +744,7 @@ function openAdminActivityEditor(){
    a.data.ed=a.data.ed||{};
    body.querySelectorAll('[data-edit]').forEach(el=>a.data.ed[el.dataset.edit]=el.value);
    const notes=$modal('#activityObservations');
-   if(notes){a.data.observations=notes.value;const last=(a.data.history||[]).at(-1);if(last&&['Migrada','Quebra'].includes(last.status)&&last.status===a.data.status)last.notes=notes.value;}
+   if(notes){a.data.observations=notes.value;const last=(a.data.history||[]).at(-1);if(last&&['Migrada','Quebra'].includes(normStatus(last.status))&&last.status===a.data.status)last.notes=notes.value;}
    a.data.updatedAt=new Date().toISOString();save();
   };
   body.querySelectorAll('[data-edit]').forEach(el=>{
@@ -722,8 +756,8 @@ function openAdminActivityEditor(){
    persist();const next=$modal('#activityStatus').value,prev=a.data.status;
    if(next===prev)return;
    a.data.status=next;
-   if(['Migrada','Quebra'].includes(next))a.data.endAt=new Date().toISOString();
-   else if(['Migrada','Quebra'].includes(prev))a.data.endAt=null;
+   if(['Migrada','Quebra'].includes(normStatus(next)))a.data.endAt=new Date().toISOString();
+   else if(['Migrada','Quebra'].includes(normStatus(prev)))a.data.endAt=null;
    recordActivityHistory(a,next,a.data.observations||'');
    log('Status alterado pelo administrador',activityName(a)+' · '+prev+' → '+next,a.id);
    save();toast('Status atualizado');renderDetail();
@@ -938,20 +972,22 @@ if(adminTab==='Configurar projeto'){
  sectionInput.addEventListener('input',syncSectionEditor);sectionInput.addEventListener('change',syncSectionEditor);syncSectionEditor();
  addSectionButton.onclick=()=>{const name=sectionInput.value.trim();if(!name)return toast('Informe o nome da seção');if(matchingSection())return toast('Esta seção já existe');p.data.extraSections=p.data.extraSections||[];p.data.extraSections.push(name);save();renderAdmin();toast('Seção cadastrada')};
  deleteSectionButton.onclick=()=>{const name=matchingSection();if(!name)return toast('Selecione uma seção existente');const standard=defaultSections.includes(name);if(standard&&!initialSetup())return toast('Seções padrão só podem ser excluídas durante a criação inicial do projeto');
- const mappedSection=key=>{const extra=(p.data.extraFields||[]).find(x=>(typeof x==='string'?x:x.name)===key);if(extra)return typeof extra==='string'?'Outras informações':extra.section||'Outras informações';const n=key.toLocaleUpperCase('pt-BR');if(/TÉCNICO|TECNICO|RESPONSÁVEL|RESPONSAVEL/.test(n))return 'Outras informações';if(/ENDEREÇO|ENDERECO|COORDENADAS|EMPRESA|FORTINET|^ID$/.test(n))return 'Localização / Unidade';if(/UNIDADE|CLONAR|NETWORK|HOSTNAME|MUNIC[IÍ]PIO|EQUIPAMENTO|SERIAL|REPARO|MERAKI|^QTD$|^LOTE$|^ID VGR$/.test(n))return 'Equipamento';if(/LINK|DEDICADO|INTERNET|VELOCIDADE|OPERADORA|PRODUTO|MEIOS|^LP$|ATENDIMENTO/.test(n))return 'Link';return 'Outras informações'};
+ const mappedSection=key=>projectFieldSection(p,key);
  const fields=[...new Set([...allProjectFieldNames(p),...(p.data.activityTemplate||[]),...(p.data.extraFields||[]).map(x=>typeof x==='string'?x:x.name),...arr('activities').filter(a=>a.data.projectId===p.id).flatMap(a=>Object.keys(a.data.row||{}))])].filter(x=>mappedSection(x)===name);
  const msg='Excluir a seção "'+name+'" e TODOS os '+fields.length+' campo(s) vinculados a ela? Os valores desses campos serão apagados permanentemente das atividades do projeto.';if(!confirm(msg))return;
  p.data.extraSections=(p.data.extraSections||[]).filter(x=>x!==name);p.data.removedDefaultSections=p.data.removedDefaultSections||[];if(standard&&!p.data.removedDefaultSections.includes(name))p.data.removedDefaultSections.push(name);
- p.data.removedProjectFields=[...new Set([...(p.data.removedProjectFields||[]),...fields])];p.data.extraFields=(p.data.extraFields||[]).filter(x=>!fields.includes(typeof x==='string'?x:x.name));p.data.activityTemplate=(p.data.activityTemplate||[]).filter(x=>!fields.includes(x));arr('activities').filter(a=>a.data.projectId===p.id).forEach(a=>fields.forEach(key=>{if(a.data.ed)delete a.data.ed[key];if(a.data.row)delete a.data.row[key]}));save();renderAdmin();toast('Seção e seus campos excluídos')};
+ p.data.removedProjectFields=[...new Set([...(p.data.removedProjectFields||[]),...fields])];p.data.extraFields=(p.data.extraFields||[]).filter(x=>!fields.includes(typeof x==='string'?x:x.name));p.data.activityTemplate=(p.data.activityTemplate||[]).filter(x=>!fields.includes(x));for(const field of fields)delete (p.data.fieldSectionOverrides||{})[importColumnKey(field)];arr('activities').filter(a=>a.data.projectId===p.id).forEach(a=>fields.forEach(key=>{if(a.data.ed)delete a.data.ed[key];if(a.data.row)delete a.data.row[key]}));save();renderAdmin();toast('Seção e seus campos excluídos')};
  $('#openNewActivity').onclick=()=>openNewActivityDialog(p);$('#openAdminActivityEditor').onclick=openAdminActivityEditor;
  const fieldInput=$('#extraFieldName'),fieldSection=$('#extraFieldSection'),addFieldButton=$('#addExtraField'),deleteFieldButton=$('#deleteSelectedField');
+ const fieldSectionNotice=document.createElement('p');fieldSectionNotice.id='fieldSectionNotice';fieldSectionNotice.className='field-section-warning';fieldSectionNotice.hidden=true;fieldSection.closest('.field-editor').insertAdjacentElement('afterend',fieldSectionNotice);
  const projectFieldNames=()=>allProjectFieldNames(p);
  const matchingField=()=>projectFieldNames().find(n=>n.toLocaleLowerCase('pt-BR')===fieldInput.value.trim().toLocaleLowerCase('pt-BR'));
- const sectionForField=name=>{let extra=(p.data.extraFields||[]).find(x=>(typeof x==='string'?x:x.name)===name);if(extra)return typeof extra==='string'?'Outras informações':extra.section||'Outras informações';let n=name.toLocaleUpperCase('pt-BR');if(/TÉCNICO|TECNICO|RESPONSÁVEL|RESPONSAVEL/.test(n))return 'Localização / Unidade';if(/ENDEREÇO|ENDERECO|COORDENADAS|EMPRESA|FORTINET|^ID$/.test(n))return 'Localização / Unidade';if(/UNIDADE|CLONAR|NETWORK|HOSTNAME|MUNIC[IÍ]PIO|EQUIPAMENTO|SERIAL|REPARO|MERAKI|^QTD$|^LOTE$|^ID VGR$/.test(n))return 'Equipamento';if(/LINK|DEDICADO|INTERNET|VELOCIDADE|OPERADORA|PRODUTO|MEIOS|^LP$|ATENDIMENTO/.test(n))return 'Link';return 'Equipamento'};
- const syncFieldEditor=()=>{let match=matchingField(),hasName=!!fieldInput.value.trim();if(match){fieldSection.value=sectionForField(match);fieldSection.disabled=true}else fieldSection.disabled=false;addFieldButton.hidden=!hasName||!!match;deleteFieldButton.hidden=!match;deleteFieldButton.disabled=!!match&&!initialSetup()&&!(p.data.extraFields||[]).some(x=>(typeof x==='string'?x:x.name)===match);deleteFieldButton.title=deleteFieldButton.disabled?'Campo padrão protegido após configuração inicial':'Excluir campo selecionado';};
+ const sectionForField=name=>projectFieldSection(p,name);
+ const syncFieldEditor=()=>{let match=matchingField(),hasName=!!fieldInput.value.trim();if(match)fieldSection.value=sectionForField(match);fieldSection.disabled=false;addFieldButton.hidden=!hasName||!!match;deleteFieldButton.hidden=!match;const isExtra=!!match&&(p.data.extraFields||[]).some(x=>(typeof x==='string'?x:x.name)===match);deleteFieldButton.disabled=!!match&&!initialSetup()&&!isExtra;deleteFieldButton.title=deleteFieldButton.disabled?'Campo padrão protegido após configuração inicial':'Excluir campo selecionado';fieldSectionNotice.hidden=!match||isExtra||fieldSection.value===defaultProjectFieldSection(match);fieldSectionNotice.textContent=fieldSectionNotice.hidden?'':'Atenção, modificação de campo padrão para outra sessão';};
  fieldInput.addEventListener('input',syncFieldEditor);fieldInput.addEventListener('change',syncFieldEditor);syncFieldEditor();
+ fieldSection.addEventListener('change',()=>{const match=matchingField();if(!match)return;const current=projectFieldSection(p,match),selected=fieldSection.value;if(current===selected)return;const normalized=importColumnKey(match);const extras=p.data.extraFields||[],extraIndex=extras.findIndex(x=>importColumnKey(typeof x==='string'?x:x.name)===normalized);if(extraIndex>=0)extras[extraIndex]={name:match,section:selected};else{p.data.fieldSectionOverrides=p.data.fieldSectionOverrides||{};if(selected===defaultProjectFieldSection(match))delete p.data.fieldSectionOverrides[normalized];else p.data.fieldSectionOverrides[normalized]=selected;}save();syncFieldEditor();toast('Seção do campo atualizada')});
  addFieldButton.onclick=()=>{let name=fieldInput.value.trim(),section=fieldSection.value;if(!name)return toast('Informe o nome do campo');if(matchingField())return toast('Esse campo já existe');p.data.extraFields=p.data.extraFields||[];p.data.extraFields.push({name,section});p.data.removedProjectFields=(p.data.removedProjectFields||[]).filter(x=>x.toLocaleLowerCase('pt-BR')!==name.toLocaleLowerCase('pt-BR'));save();renderAdmin();toast('Campo cadastrado em todas as atividades do projeto')};
- deleteFieldButton.onclick=()=>{let name=matchingField();if(!name)return;if(!initialSetup() && !(p.data.extraFields||[]).some(x=>(typeof x==='string'?x:x.name)===name))return toast('Campos padrão só podem ser excluídos na configuração inicial');if(!confirm('Excluir o campo "'+name+'" do projeto e de todas as atividades? Os valores preenchidos serão apagados.'))return;p.data.removedProjectFields=[...new Set([...(p.data.removedProjectFields||[]),name])];p.data.extraFields=(p.data.extraFields||[]).filter(x=>(typeof x==='string'?x:x.name)!==name);p.data.activityTemplate=(p.data.activityTemplate||[]).filter(x=>x!==name);arr('activities').filter(a=>a.data.projectId===p.id).forEach(a=>{if(a.data.ed)delete a.data.ed[name];if(a.data.row)delete a.data.row[name]});save();renderAdmin();toast('Campo excluído do projeto')};
+ deleteFieldButton.onclick=()=>{let name=matchingField();if(!name)return;if(!initialSetup() && !(p.data.extraFields||[]).some(x=>(typeof x==='string'?x:x.name)===name))return toast('Campos padrão só podem ser excluídos na configuração inicial');if(!confirm('Excluir o campo "'+name+'" do projeto e de todas as atividades? Os valores preenchidos serão apagados.'))return;p.data.removedProjectFields=[...new Set([...(p.data.removedProjectFields||[]),name])];p.data.extraFields=(p.data.extraFields||[]).filter(x=>(typeof x==='string'?x:x.name)!==name);p.data.activityTemplate=(p.data.activityTemplate||[]).filter(x=>x!==name);delete (p.data.fieldSectionOverrides||{})[importColumnKey(name)];arr('activities').filter(a=>a.data.projectId===p.id).forEach(a=>{if(a.data.ed)delete a.data.ed[name];if(a.data.row)delete a.data.row[name]});save();renderAdmin();toast('Campo excluído do projeto')};
 
 
 }

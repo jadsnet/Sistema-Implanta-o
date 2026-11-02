@@ -15,6 +15,8 @@ const activities=[
 ];
 const db={activities};let saves=0;
 const context={console,Date,Math,Set,Map,JSON,DB:db,
+ breakStatuses:['Quebra Cliente','Quebra Delfia','Quebra Duplicidade','Quebra link','Quebra Vivo Redes'],
+ normStatus:s=>String(s||'').toLowerCase().includes('quebra')?'Quebra':String(s||'').toLowerCase().includes('migra')?'Migrada':'Pendente',
  activeStatuses:['Contatando técnico','Iniciando configuração','Finalizando configuração','Aguardando cliente config Fortinet','Organização de Rack e equipamentos'],
  arr:key=>db[key]||[],projectActivities:()=>activities,getName:p=>p.data.name,
  allProjectFieldNames:p=>['ID VGR','NETWORK','REPARO','EQUIPAMENTO','SERIAL MX','VELOCIDADE DO LINK','ENDEREÇO COMPLETO','ID DEDICADO',...p.data.extraFields.map(x=>x.name)],
@@ -131,6 +133,14 @@ context.XLSX={read(){return workbook},utils:{
   const realEntry=realPrepared.entries.find(entry=>entry.key==='2262813');
   assert.ok(realEntry,'ID que aparece várias vezes deve ser encontrado');
   assert.equal(context.importedStatus(realEntry.row['STATUS SDWAN']),'Migrada');
+  const breakEvents=realPrepared.entries.flatMap(entry=>entry.row.__importBreakEvents||[]);
+  assert.equal(breakEvents.length,35,'33 Quebras explícitas e 2 Duplicidades mapeadas devem ser preservadas');
+  assert.equal(realPrepared.entries.filter(entry=>entry.row.__importBreakEvents.length).length,32,'32 IDs distintos apresentam quebras');
+  assert.equal(breakEvents.filter(event=>event.analyst==='JANAINA DA SILVA BENEDITO').length,2,'Janaina tem duas quebras identificadas, inclusive em ID migrado depois');
+  assert.equal(breakEvents.filter(event=>event.analyst==='CESAR SOARES').length,3,'Cesar tem três quebras informadas na coluna de analista');
+  assert.equal(breakEvents.filter(event=>!event.analyst).length,24,'não atribuir a terceiros 23 células vazias e uma observação textual');
+  assert.ok(breakEvents.some(event=>event.status==='Quebra link'));
+  assert.ok(breakEvents.some(event=>event.status==='Quebra Duplicidade'));
   console.log('PASSOU: diário de bordo real com 752 linhas, 500 IDs VGR, 355 migradas e 252 movimentações repetidas');
  }
  console.log('PASSOU: seleção da aba, criação e reimportação dos IDs ausentes, migrações protegidas, campos personalizados, aliases, datas e histórico');
