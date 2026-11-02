@@ -1713,6 +1713,73 @@ html[data-theme="light"] .informe-draft-note{background:#74558c;color:#fff}
  .informe-send-button{width:100%}
  #reportSendInforme{margin-left:0}
 }
+/* Redação do informe no padrão Outlook, preservando a paleta roxa. */
+.informe-dialog{width:min(1110px,96vw)}
+.informe-switch{margin:13px 0 18px}
+.informe-outlook-header{display:grid;grid-template-columns:88px minmax(0,1fr);gap:14px;align-items:start}
+.informe-mail-fields{min-width:0}
+.informe-send-top{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:76px;width:76px;height:89px;min-height:89px;justify-content:center;padding:9px 5px;font-size:12px}
+.informe-send-top svg{width:24px;height:24px}
+.informe-outlook-row{display:grid;grid-template-columns:90px minmax(0,1fr);align-items:center;gap:11px;min-height:47px;border-bottom:1px solid #73568b}
+.informe-outlook-label{display:flex;align-items:center;justify-content:center;min-height:33px;max-width:90px;padding:5px 10px;border-radius:8px;background:#56376e;color:#f8efff;font-weight:650;font-size:13px;cursor:text}
+.informe-outlook-row input{width:100%;min-width:0;min-height:41px;background:transparent;border:0;outline:none;padding:9px 7px;color:#fff;box-shadow:none!important;font-size:13px;font-family:inherit;box-sizing:border-box}
+.informe-outlook-row input:focus{background:#ffffff0a}
+.informe-outlook-row input::placeholder{color:#baa5cd}
+.informe-subject-row .informe-outlook-label{background:transparent;justify-content:flex-start;color:#f4e2ff;padding-left:8px}
+.informe-from-row{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:9px 7px 4px 8px;color:#cbb7dd;font-size:11px}
+.informe-from-row>label{font-weight:750}
+.informe-from-row input{background:#432c57;color:#fff;border:1px solid #70548a;border-radius:7px;height:30px;min-width:180px;padding:5px 9px;font-size:12px}
+.informe-from-row span{color:#cbb7dd}
+.informe-attachment{display:flex;align-items:center;gap:11px;margin:15px 0 0;padding:10px 13px;background:#3e2a53;border:1px solid #715289;border-radius:11px;color:#eadaf2}
+.informe-attachment.is-ready{border-color:#8565a4;background:#46305c}
+.informe-attachment>svg{flex:none;color:#c999eb}
+.informe-attachment-meta{display:flex;flex:1;flex-direction:column;gap:3px;min-width:0}
+.informe-attachment-meta strong{font-size:12px;overflow-wrap:anywhere;color:#fff}
+.informe-attachment-meta small{font-size:11px;color:#d5c3e1}
+.informe-attachment button{padding:8px 12px;white-space:nowrap;font-size:12px;min-height:32px}
+.informe-attachment button:disabled{opacity:.44;cursor:wait}
+.informe-editor-shell{margin-top:16px;border-radius:13px;overflow:hidden;border:1px solid #786094;background:#3b2751;box-shadow:3px 6px 15px #1207183a}
+.informe-editor-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:5px;padding:9px 11px;border-bottom:1px solid #806199;background:#49325e}
+.informe-editor-toolbar button{background:transparent;color:#eaddf5;border-radius:6px;min-height:30px;min-width:32px;padding:5px 8px;font-size:12px;font-weight:650;box-shadow:none;cursor:pointer}
+.informe-editor-toolbar button:hover,.informe-editor-toolbar button:focus-visible{background:#75518e;color:#fff;outline:none}
+.informe-toolbar-divider{height:22px;width:1px;margin:0 4px;background:#9070a8}
+.informe-toolbar-color{display:flex;align-items:center;gap:5px;font-size:12px;color:#ede0f5;padding-left:5px}
+.informe-toolbar-color input{width:27px;height:27px;border:0;background:transparent;padding:0;cursor:pointer}
+.informe-rich-editor{color:#f6efff;background:#39264d;min-height:280px;max-height:430px;overflow:auto;padding:20px 23px;font-size:14px;font-weight:400;line-height:1.55;outline:none;white-space:normal}
+.informe-rich-editor:focus{box-shadow:inset 0 0 0 2px #a25fd155}
+.informe-rich-editor p{margin:0 0 15px}
+.informe-rich-editor .informe-body-panel{max-width:100%;overflow-x:auto}
+.informe-rich-editor .informe-body-panel p{margin-bottom:0}
+.informe-rich-editor h3{font-size:20px;margin:8px 0 12px}
+.informe-send-actions{margin-top:13px;justify-content:flex-start}
+.informe-edit-hint{font-size:11px;color:#c8b5d7}
+html[data-theme="light"] .informe-outlook-label{background:#794e99;color:#fff}
+html[data-theme="light"] .informe-subject-row .informe-outlook-label{background:transparent;color:#f6eaff}
+html[data-theme="light"] .informe-outlook-row{border-color:#a382bb}
+html[data-theme="light"] .informe-outlook-row input{color:#fff}
+html[data-theme="light"] .informe-outlook-row input::placeholder{color:#ebd8f7}
+html[data-theme="light"] .informe-from-row,html[data-theme="light"] .informe-from-row span{color:#f1ddf9}
+html[data-theme="light"] .informe-from-row input{background:#6b4a83;color:#fff;border-color:#ad89c6}
+html[data-theme="light"] .informe-attachment{background:#76578c;border-color:#b28acb}
+html[data-theme="light"] .informe-attachment.is-ready{background:#6a4a80}
+html[data-theme="light"] .informe-attachment-meta small{color:#f4e6fc}
+html[data-theme="light"] .informe-editor-shell{border-color:#b89bc9;background:#75578d}
+html[data-theme="light"] .informe-editor-toolbar{background:#74528b;border-color:#a98bbd}
+html[data-theme="light"] .informe-editor-toolbar button{color:#fff}
+html[data-theme="light"] .informe-editor-toolbar button:hover{background:#926cad}
+html[data-theme="light"] .informe-toolbar-color{color:#fff}
+html[data-theme="light"] .informe-rich-editor{background:#75578d;color:#fff}
+html[data-theme="light"] .informe-edit-hint{color:#f0dff9}
+@media(max-width:680px){
+ .informe-outlook-header{grid-template-columns:1fr}
+ .informe-send-top{flex-direction:row;min-height:39px;height:39px;width:145px;gap:9px}
+ .informe-send-top svg{width:18px;height:18px}
+ .informe-outlook-row{grid-template-columns:66px minmax(0,1fr);gap:6px}
+ .informe-outlook-label{max-width:66px}
+ .informe-rich-editor{padding:15px 12px}
+ .informe-attachment{flex-wrap:wrap}
+ .informe-attachment button{margin-left:auto}
+}
 /* Importação/atualização de atividades: ações com o mesmo padrão dos botões do sistema. */
 .new-activity-import-area{display:flex;flex-direction:column;align-items:flex-end;gap:11px;padding:0 15px 0 0;margin:-8px 0 24px}
 .new-activity-import-area .activity-import-preview{width:min(100%,580px);max-width:580px}

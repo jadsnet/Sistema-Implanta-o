@@ -804,6 +804,33 @@ async function buildActivityReportFile(selection,format='xlsx'){
   const safe=v=>{let x=String(v??'');if(/^[\s]*[=+@\-]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"'};
   return {filename,blob:new Blob(['\ufeff'+matrix.map(row=>row.map(safe).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'})};
  }
+ // Exportador XLSX local, inclusive sem acesso ao CDN do SheetJS.
+ if(format==='xlsx'&&!window.XLSX&&window.JSZip){
+  const xmlEscape=value=>String(value??'').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]));
+  const colAt=index=>{let out='';for(let n=index+1;n>0;n=Math.floor((n-1)/26))out=String.fromCharCode(65+(n-1)%26)+out;return out};
+  const widths=matrix[0].map((heading,i)=>{
+   const longest=matrix.reduce((max,row)=>Math.max(max,...String(row[i]??'').split(/\r?\n/).map(line=>Math.min(line.length,70))),0);
+   return heading==='Histórico'?Math.min(74,Math.max(62,longest+5)):Math.min(60,Math.max(/observ|descri|endere|localidade|coment|detalh/i.test(heading)?30:15,longest+3));
+  });
+  const rowsXml=matrix.map((row,i)=>'<row r="'+(i+1)+'">'+row.map((value,j)=>
+   '<c r="'+colAt(j)+(i+1)+'" t="inlineStr"><is><t xml:space="preserve">'+xmlEscape(value)+'</t></is></c>').join('')+'</row>').join('');
+  const sheetXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
+   '<dimension ref="A1:'+colAt(chosen.length-1)+matrix.length+'"/><sheetViews><sheetView workbookViewId="0"/></sheetViews>'+
+   '<sheetFormatPr defaultRowHeight="15"/><cols>'+widths.map((width,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+width+'" customWidth="1"/>').join('')+
+   '</cols><sheetData>'+rowsXml+'</sheetData><autoFilter ref="A1:'+colAt(chosen.length-1)+matrix.length+'"/></worksheet>';
+  const zip=new JSZip();
+  zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');
+  zip.file('_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+  zip.file('xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Atividades" sheetId="1" r:id="rId1"/></sheets></workbook>');
+  zip.file('xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>');
+  zip.file('xl/worksheets/sheet1.xml',sheetXml);
+  const historyIndex=chosen.findIndex(c=>c[0]==='Histórico');
+  const historyLines=historyIndex<0?[]:matrix.slice(1).map(row=>String(row[historyIndex]||'').split('\n').length);
+  const bytes=await zip.generateAsync({type:'uint8array',compression:'DEFLATE'});
+  const styled=await styleActivityReportWorkbook(bytes,historyIndex<0?'':colAt(historyIndex),historyLines);
+  return {filename,blob:new Blob([styled],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})};
+ }
  if(!window.XLSX)throw new Error('Biblioteca de planilhas indisponível. Verifique a conexão ou selecione CSV.');
  const wb=XLSX.utils.book_new(),sheet=XLSX.utils.aoa_to_sheet(matrix);
  sheet['!cols']=matrix[0].map((heading,i)=>{
@@ -843,21 +870,60 @@ function informeSummary(selection){
  });
  return {statuses,total:selection.rows.length,projectName:getName(selection.p),date:new Date().toLocaleDateString('pt-BR')};
 }
-function informePlainText(summary,message=''){
- return [message.trim(),'',
-  'Informe de atividades — '+summary.projectName,'Data: '+summary.date,
-  'Total: '+summary.total+' atividade(s)',...summary.statuses.map(([name,count])=>name+': '+count),
-  '','O detalhamento analítico está na planilha do relatório.'].join('\n').trim();
+function informePanelHtml(summary){
+ const counts=summary.statuses.map(([name,count])=>{
+  const tone=normStatus(name)==='Migrada'?'#56cf90':normStatus(name)==='Quebra'?'#ffa875':normStatus(name)==='Em andamento'?'#b58bea':'#82b2f3';
+  return '<td style="padding:5px;vertical-align:top"><div style="border-radius:9px;border-left:4px solid '+tone+';background:#614777;padding:11px 16px;min-width:110px;box-sizing:border-box">'+
+   '<div style="color:#ffffff;font-size:12px;font-weight:bold">'+esc(name)+'</div><div style="color:#ffffff;font-size:24px;font-weight:bold;margin-top:6px">'+count+'</div></div></td>';
+ }).join('');
+ return '<section class="informe-body-panel" contenteditable="false" style="background:#39244f;color:#fff;border:1px solid #806495;border-radius:13px;padding:17px 16px;margin:18px 0">'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">'+
+  '<div><div style="font-size:10px;color:#d8abf2;letter-spacing:1px;font-weight:bold">PAINEL DE ATIVIDADES</div>'+
+  '<div style="font-size:20px;font-weight:bold;margin:5px 0">'+esc(summary.projectName)+'</div>'+
+  '<div style="font-size:12px;color:#e5d1ee">'+esc(summary.date)+' · conforme filtros do relatório</div></div>'+
+  '<div style="background:#8629c3;color:white;text-align:center;border-radius:10px;min-width:70px;padding:8px 12px">'+
+  '<div style="font-size:11px">Total</div><div style="font-size:27px;font-weight:bold">'+summary.total+'</div></div></div>'+
+  '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:13px -5px 8px;max-width:100%;border-collapse:separate"><tr>'+counts+'</tr></table>'+
+  '<p style="font-size:11px;color:#e3d1ec;margin:7px 0 0">O relatório analítico de '+summary.total+' atividade(s) está anexado a esta mensagem.</p>'+
+  '</section>';
 }
-function informeHtml(summary,message=''){
- const cards=summary.statuses.map(([name,count])=>
-  '<td style="padding:8px"><div style="background:#eee4f5;border-radius:10px;padding:15px 20px;min-width:110px">'+
-  '<div style="font:600 13px Arial;color:#503468">'+esc(name)+'</div>'+
-  '<div style="font:700 26px Arial;color:#351c4f">'+count+'</div></div></td>').join('');
- return '<div style="font-family:Arial,sans-serif;color:#35243f"><p>'+esc(message).replace(/\n/g,'<br>')+
-  '</p><h2 style="color:#351c4f">Informe de atividades — '+esc(summary.projectName)+
-  '</h2><p>'+esc(summary.date)+' · '+summary.total+' atividade(s)</p><table><tr>'+cards+
-  '</tr></table><p>Consulte o detalhamento analítico na planilha anexa.</p></div>';
+function informeEditorContent(editor){
+ const cloned=editor.cloneNode(true);
+ cloned.querySelectorAll('script,style,iframe,object,embed,form').forEach(el=>el.remove());
+ cloned.querySelectorAll('*').forEach(el=>{
+  el.removeAttribute('contenteditable');
+  for(const attr of [...el.attributes]){
+   if(/^on/i.test(attr.name)||['srcdoc','formaction'].includes(attr.name))el.removeAttribute(attr.name);
+   if(['href','src'].includes(attr.name)&&!/^https?:\/\//i.test(attr.value))el.removeAttribute(attr.name);
+  }
+ });
+ cloned.removeAttribute('contenteditable');
+ return {html:'<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.55;color:#30213f">'+cloned.innerHTML+'</div>',
+  plain:editor.innerText.trim()};
+}
+function mimeBase64(input){
+ const bytes=typeof input==='string'?new TextEncoder().encode(input):input;
+ let raw='';for(let i=0;i<bytes.length;i+=16384)raw+=String.fromCharCode(...bytes.subarray(i,i+16384));
+ return btoa(raw).match(/.{1,76}/g)?.join('\r\n')||'';
+}
+async function createInformeEmailDraft({to,cc,from,subject,body,file}){
+ const cleanHeader=value=>String(value||'').replace(/[\r\n]/g,' ').trim();
+ const boundary='informe_mixed_'+Date.now().toString(36),alternative='informe_alternative_'+Date.now().toString(36);
+ const fileName=cleanHeader(file.filename).replace(/["\\]/g,'_');
+ const parts=['X-Unsent: 1','MIME-Version: 1.0','Date: '+new Date().toUTCString()];
+ if(from)parts.push('From: <'+cleanHeader(from)+'>');
+ parts.push('To: '+cleanHeader(to.join(', ')));
+ if(cc.length)parts.push('Cc: '+cleanHeader(cc.join(', ')));
+ parts.push('Subject: =?UTF-8?B?'+btoa(String.fromCharCode(...new TextEncoder().encode(subject)))+'?=');
+ parts.push('Content-Type: multipart/mixed; boundary="'+boundary+'"','','This is a multipart message in MIME format.',
+  '--'+boundary,'Content-Type: multipart/alternative; boundary="'+alternative+'"','',
+  '--'+alternative,'Content-Type: text/plain; charset="utf-8"','Content-Transfer-Encoding: base64','',mimeBase64(body.plain),
+  '--'+alternative,'Content-Type: text/html; charset="utf-8"','Content-Transfer-Encoding: base64','',mimeBase64(body.html),
+  '--'+alternative+'--','',
+  '--'+boundary,'Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; name="'+fileName+'"',
+  'Content-Transfer-Encoding: base64','Content-Disposition: attachment; filename="'+fileName+'"','',mimeBase64(new Uint8Array(await file.blob.arrayBuffer())),
+  '--'+boundary+'--','');
+ return {filename:'Informe_'+new Date().toISOString().slice(0,10)+'.eml',blob:new Blob([parts.join('\r\n')],{type:'message/rfc822'})};
 }
 function openInformeComposer(selection){
  document.getElementById('informeComposeOverlay')?.remove();
@@ -868,20 +934,42 @@ function openInformeComposer(selection){
  const overlay=document.createElement('div');overlay.id='informeComposeOverlay';overlay.className='report-overlay informe-overlay';
  const plane='<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg>';
  const cross='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
- const statusClass=status=>normStatus(status)==='Migrada'?'migrada':normStatus(status)==='Quebra'?'quebra':normStatus(status)==='Em andamento'?'andamento':'pendente';
- const cards=summary.statuses.map(([name,count])=>`<div class="informe-status-card informe-${statusClass(name)}"><span>${esc(name)}</span><strong>${count}</strong></div>`).join('');
  overlay.innerHTML=`<div class="report-dialog informe-dialog" role="dialog" aria-modal="true" aria-labelledby="informeTitle">
   <div class="report-dialog-head informe-dialog-head"><div><h3 id="informeTitle">Enviar informe</h3><p class="small muted">Informe de ${esc(summary.projectName)} · ${summary.total} atividades selecionadas</p></div><button type="button" class="report-close" id="closeInforme" aria-label="Fechar informe">${cross}</button></div>
   <div class="informe-switch" role="group" aria-label="Tipo de envio"><button type="button" class="informe-tab is-active" data-mode="email">E-mail</button><button type="button" class="informe-tab" data-mode="teams">Fluxo de trabalho Teams</button></div>
-  <div class="informe-form" id="informeEmailForm">
-   <div class="informe-form-grid"><label class="informe-wide">Para (destinatários)<input id="informeTo" type="text" placeholder="pessoa@empresa.com; equipe@empresa.com"></label><label class="informe-wide">CC (com cópia)<input id="informeCc" type="text" placeholder="copia@empresa.com (opcional)"></label><label>De (remetente)<input id="informeFrom" type="email" value="${esc(sender)}" placeholder="seu.email@empresa.com"></label><label>Assunto<input id="informeSubject" type="text" value="${esc('Atualização de atividades — '+summary.projectName+' — '+summary.date)}"></label></div>
-   <p class="informe-hint" id="informeSenderHint">${sender?'E-mail identificado no usuário logado. O aplicativo de e-mail escolherá a conta efetiva.':'Login local: '+esc(logged)+'. Informe seu e-mail acima; a conta remetente será escolhida no aplicativo de e-mail.'}</p>
+  <div class="informe-outlook-header">
+   <button type="button" id="informeSend" class="informe-send-button informe-send-top" title="Preparar rascunho com anexo">${plane}<span>Preparar</span></button>
+   <div class="informe-mail-fields">
+    <div class="informe-form" id="informeEmailForm">
+     <div class="informe-outlook-row"><label class="informe-outlook-label" for="informeTo">Para</label><input id="informeTo" type="text" placeholder="Destinatários; separe os e-mails por ponto e vírgula" autocomplete="off"></div>
+     <div class="informe-outlook-row"><label class="informe-outlook-label" for="informeCc">Cc</label><input id="informeCc" type="text" placeholder="Com cópia (opcional)" autocomplete="off"></div>
+     <div class="informe-outlook-row informe-subject-row"><label class="informe-outlook-label" for="informeSubject">Assunto</label><input id="informeSubject" type="text" value="${esc('Atualização de atividades — '+summary.projectName+' — '+summary.date)}"></div>
+     <div class="informe-from-row"><label for="informeFrom">De</label><input id="informeFrom" type="email" value="${esc(sender)}" placeholder="Seu e-mail (conta de envio)"><span id="informeSenderHint">${sender?'Conta sugerida pelo usuário logado.':'Usuário logado: '+esc(logged)+'. Informe o e-mail remetente, se possuir.'}</span></div>
+    </div>
+    <div class="informe-form" id="informeTeamsForm" hidden><div class="informe-form-grid"><label>Equipe<input id="informeTeam" type="text" placeholder="Nome da equipe"></label><label>Canal<input id="informeChannel" type="text" placeholder="Canal do Teams"></label><label class="informe-wide">Fluxo de trabalho<input id="informeWorkflow" type="text" placeholder="Nome do fluxo de trabalho do Power Automate"></label></div><p class="informe-hint">A postagem automática no fluxo será disponibilizada com a futura integração do Microsoft 365.</p></div>
+   </div>
   </div>
-  <div class="informe-form" id="informeTeamsForm" hidden><div class="informe-form-grid"><label>Equipe<input id="informeTeam" type="text" placeholder="Nome da equipe"></label><label>Canal<input id="informeChannel" type="text" placeholder="Canal do Teams"></label><label class="informe-wide">Fluxo de trabalho<input id="informeWorkflow" type="text" placeholder="Nome do fluxo de trabalho do Power Automate"></label></div><p class="informe-hint">Rascunho para fluxo de trabalho. A conexão automática com Teams/Power Automate será configurada depois no Microsoft 365.</p></div>
-  <label class="informe-message-label">Mensagem<textarea id="informeMessage" rows="4" placeholder="Escreva a mensagem para acompanhar o informe...">Olá,&#10;&#10;Segue o informe de atividades do projeto ${esc(summary.projectName)}.&#10;&#10;Atenciosamente,&#10;${esc(logged)}</textarea></label>
-  <section class="informe-preview" aria-label="Prévia do painel do informe"><div class="informe-preview-header"><div><span class="informe-overline">PAINEL DE ATIVIDADES</span><h4>${esc(summary.projectName)}</h4><p>${esc(summary.date)} · conforme filtros do relatório</p></div><div class="informe-total"><span>Total</span><strong>${summary.total}</strong></div></div><div class="informe-status-grid">${cards}</div><p class="informe-preview-foot">A planilha analítica contém as ${summary.total} atividades e as colunas selecionadas em “Extrair relatório”.</p></section>
-  <div class="informe-send-actions"><div class="informe-action-links"><button type="button" class="secondary" id="informeCopy">Copiar informe formatado</button><button type="button" class="secondary" id="informeDownload">Baixar planilha analítica</button></div><button type="button" id="informeSend" class="informe-send-button">${plane}<span>Preparar rascunho</span></button></div>
-  <p class="informe-draft-note" id="informeDraftNote">Modo local: será baixada a planilha e aberto um rascunho no seu aplicativo de e-mail. Para inserir os quadros no corpo, use “Copiar informe formatado”. Anexe a planilha manualmente antes de enviar. Nenhuma mensagem é enviada automaticamente.</p>
+  <div class="informe-attachment" id="informeAttachment" role="status" aria-live="polite">
+   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m8 12.5 7.2-7.2a3.2 3.2 0 0 1 4.5 4.5L10.1 19.4a5 5 0 0 1-7.1-7.1l9-9"/></svg>
+   <div class="informe-attachment-meta"><strong id="informeAttachmentName">Preparando planilha analítica...</strong><small id="informeAttachmentDetail">A planilha será adicionada ao rascunho do informe.</small></div>
+   <button type="button" class="secondary" id="informeDownload" disabled>Baixar anexo</button>
+  </div>
+  <div class="informe-editor-shell">
+   <div class="informe-editor-toolbar" role="toolbar" aria-label="Formatação da mensagem">
+    <button type="button" data-format="bold" aria-label="Negrito" title="Negrito (Ctrl+B)"><b>B</b></button>
+    <button type="button" data-format="italic" aria-label="Itálico" title="Itálico (Ctrl+I)"><i>I</i></button>
+    <button type="button" data-format="underline" aria-label="Sublinhado" title="Sublinhado (Ctrl+U)"><u>U</u></button>
+    <button type="button" data-format="strikeThrough" aria-label="Tachado" title="Tachado"><s>S</s></button>
+    <span class="informe-toolbar-divider"></span>
+    <button type="button" data-format="insertUnorderedList" aria-label="Lista com marcadores" title="Lista com marcadores">• Lista</button>
+    <button type="button" data-format="insertOrderedList" aria-label="Lista numerada" title="Lista numerada">1. Lista</button>
+    <button type="button" data-format="formatBlock" data-value="h3" aria-label="Título" title="Título">Título</button>
+    <label class="informe-toolbar-color" title="Cor do texto">Cor <input id="informeFontColor" type="color" value="#ffffff" aria-label="Selecionar cor do texto"></label>
+   </div>
+   <div class="informe-rich-editor" id="informeEditor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Corpo do informe com painel de status"><p>Olá,</p><p>Segue o informe de atividades do projeto ${esc(summary.projectName)}.</p>${informePanelHtml(summary)}<p>Atenciosamente,<br>${esc(logged)}</p></div>
+  </div>
+  <div class="informe-send-actions"><button type="button" class="secondary" id="informeCopy">Copiar conteúdo formatado</button><span class="informe-edit-hint">O painel faz parte do corpo da mensagem e será incluído no rascunho.</span></div>
+  <p class="informe-draft-note" id="informeDraftNote">Modo local: “Preparar” baixa um rascunho .eml com o painel formatado e a planilha XLSX anexada. Abra esse arquivo em um cliente de e-mail compatível, confira o remetente e envie. Nenhuma mensagem é enviada automaticamente.</p>
  </div>`;
  document.body.appendChild(overlay);
  let mode='email';
@@ -893,57 +981,94 @@ function openInformeComposer(selection){
   overlay.querySelector('#informeEmailForm').hidden=mode!=='email';
   overlay.querySelector('#informeTeamsForm').hidden=mode!=='teams';
   overlay.querySelector('#informeDraftNote').textContent=mode==='email'
-   ?'Modo local: será baixada a planilha e aberto um rascunho no seu aplicativo de e-mail. Para inserir os quadros no corpo, use “Copiar informe formatado”. Anexe a planilha manualmente antes de enviar. Nenhuma mensagem é enviada automaticamente.'
-   :'Modo local: será baixada a planilha e aberto o Microsoft Teams. Cole o informe e anexe a planilha manualmente no canal ou fluxo de trabalho escolhido.';
-  overlay.querySelector('#informeSend span').textContent=mode==='email'?'Preparar rascunho':'Abrir Teams';
+   ?'Modo local: “Preparar” baixa um rascunho .eml com o painel formatado e a planilha XLSX anexada. Abra esse arquivo em um cliente de e-mail compatível, confira o remetente e envie. Nenhuma mensagem é enviada automaticamente.'
+   :'Modo local: o Teams abrirá em outra aba. O informe será copiado e a planilha baixada para anexação manual. Nenhuma postagem automática é feita.';
+  overlay.querySelector('#informeSend span').textContent=mode==='email'?'Preparar':'Abrir Teams';
  });
- const message=()=>overlay.querySelector('#informeMessage').value;
- const download=async()=>{
-  const format=window.XLSX&&window.JSZip?'xlsx':'csv';
-  const file=await buildActivityReportFile(selection,format);
-  downloadReportFile(file);
-  return file;
+ const editor=overlay.querySelector('#informeEditor'),formatButtons=overlay.querySelectorAll('.informe-editor-toolbar button[data-format]');
+ overlay.querySelector('.informe-editor-toolbar').addEventListener('mousedown',e=>{if(e.target.closest('button[data-format]'))e.preventDefault()});
+ formatButtons.forEach(button=>button.onclick=()=>{
+  editor.focus();
+  document.execCommand(button.dataset.format,false,button.dataset.value||null);
+ });
+ let lastSelection=null;
+ const rememberSelection=()=>{
+  const active=window.getSelection(),node=active?.anchorNode;
+  if(node&&editor.contains(node)&&active.rangeCount)lastSelection=active.getRangeAt(0).cloneRange();
  };
+ editor.addEventListener('keyup',rememberSelection);editor.addEventListener('mouseup',rememberSelection);
+ overlay.querySelector('#informeFontColor').onchange=e=>{
+  editor.focus();
+  if(lastSelection){const sel=window.getSelection();sel.removeAllRanges();sel.addRange(lastSelection)}
+  document.execCommand('foreColor',false,e.target.value);
+ };
+ editor.addEventListener('paste',e=>{
+  e.preventDefault();
+  document.execCommand('insertText',false,e.clipboardData?.getData('text/plain')||'');
+ });
+ editor.addEventListener('drop',e=>e.preventDefault());
+ let attachmentFile=null,attachmentTask=null;
+ const ensureAttachment=()=>{
+  if(!attachmentTask)attachmentTask=buildActivityReportFile(selection,'xlsx').then(file=>{
+   attachmentFile=file;
+   overlay.querySelector('#informeAttachmentName').textContent=file.filename;
+   overlay.querySelector('#informeAttachmentDetail').textContent='Planilha XLSX anexada ao rascunho · '+(file.blob.size/1024).toFixed(1)+' KB · '+summary.total+' atividade(s)';
+   overlay.querySelector('#informeAttachment').classList.add('is-ready');
+   overlay.querySelector('#informeDownload').disabled=false;
+   return file;
+  }).catch(err=>{
+   attachmentTask=null;
+   overlay.querySelector('#informeAttachmentName').textContent='Falha ao preparar o anexo';
+   overlay.querySelector('#informeAttachmentDetail').textContent=err.message+' — clique em Preparar para tentar novamente.';
+   console.error('Erro ao anexar relatório:',err);
+   throw err;
+  });
+  return attachmentTask;
+ };
+ ensureAttachment().catch(()=>{});
  overlay.querySelector('#informeDownload').onclick=async()=>{
   const button=overlay.querySelector('#informeDownload');button.disabled=true;
-  try{const file=await download();toast('Planilha preparada: '+file.filename)}
+  try{const file=await ensureAttachment();downloadReportFile(file);toast('Anexo baixado: '+file.filename)}
   catch(err){console.error(err);toast('Falha ao gerar a planilha: '+err.message)}
-  finally{button.disabled=false}
+  finally{button.disabled=!attachmentFile}
  };
  overlay.querySelector('#informeCopy').onclick=async()=>{
   try{
-   const html=informeHtml(summary,message()),plain=informePlainText(summary,message());
+   const {html,plain}=informeEditorContent(editor);
    if(navigator.clipboard?.write&&window.ClipboardItem){
     await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([plain],{type:'text/plain'})})]);
    }else if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(plain);
    else throw new Error('Área de transferência indisponível');
-   toast('Informe copiado. Cole-o no corpo da mensagem.');
+   toast('Corpo do informe copiado com formatação.');
   }catch(err){console.warn('Cópia indisponível',err);toast('Não foi possível copiar automaticamente. Selecione o painel para copiar.')}
  };
  overlay.querySelector('#informeSend').onclick=async()=>{
   const button=overlay.querySelector('#informeSend');
   if(mode==='email'){
    const to=overlay.querySelector('#informeTo').value.trim(),cc=overlay.querySelector('#informeCc').value.trim(),subject=overlay.querySelector('#informeSubject').value.trim();
+   const from=overlay.querySelector('#informeFrom').value.trim();
    const addresses=value=>value.split(/[;,]/).map(s=>s.trim()).filter(Boolean);
    if(!addresses(to).length||addresses(to).some(s=>!emailPattern.test(s))||addresses(cc).some(s=>!emailPattern.test(s)))return toast('Informe endereços de e-mail válidos nos campos Para e CC.');
    if(!subject)return toast('Informe o assunto do e-mail.');
-   const url='mailto:'+addresses(to).map(encodeURIComponent).join(',')+'?'+new URLSearchParams({cc:addresses(cc).join(','),subject,body:informePlainText(summary,message())}).toString();
+   if(from&&!emailPattern.test(from))return toast('Corrija o e-mail do remetente ou deixe o campo De vazio.');
    button.disabled=true;
    try{
-    const file=await download();
-    window.location.href=url;
-    toast('Rascunho aberto. Anexe o arquivo '+file.filename+' antes de enviar.',7000);
+    const file=await ensureAttachment();
+    const draft=await createInformeEmailDraft({to:addresses(to),cc:addresses(cc),from,subject,body:informeEditorContent(editor),file});
+    draft.filename='Informe_'+String(summary.projectName).replace(/[^a-zA-Z0-9_-]+/g,'_')+'_'+localDay(new Date())+'.eml';
+    downloadReportFile(draft);
+    toast('Rascunho com planilha anexada! Abra o arquivo .eml baixado no Outlook para conferir e enviar.',8000);
    }catch(err){console.error(err);toast('Falha ao preparar o informe: '+err.message)}
    finally{button.disabled=false}
   }else{
    const teamsText=['Equipe: '+(overlay.querySelector('#informeTeam').value.trim()||'Não definida'),
     'Canal: '+(overlay.querySelector('#informeChannel').value.trim()||'Não definido'),
-    'Fluxo de trabalho: '+(overlay.querySelector('#informeWorkflow').value.trim()||'Não definido'),informePlainText(summary,message())].join('\n');
+    'Fluxo de trabalho: '+(overlay.querySelector('#informeWorkflow').value.trim()||'Não definido'),informeEditorContent(editor).plain].join('\n');
    // Abrir durante o clique evita bloqueio da janela por políticas de pop-up.
    const teamsWindow=window.open('https://teams.microsoft.com/','_blank','noopener,noreferrer');
    button.disabled=true;
    try{
-    const file=await download();
+    const file=await ensureAttachment();downloadReportFile(file);
     if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(teamsText);
     toast('Informe preparado. Cole no Teams e anexe '+file.filename+'.',7000);
     if(!teamsWindow)toast('Planilha baixada. Abra o Teams manualmente e cole o informe.',7000);

@@ -111,13 +111,15 @@ no editor; os arquivos gerados foram reabertos como planilhas Excel.
 - No modo claro, o cabeçalho **Editar atividade** tem roxo mais intenso e os textos auxiliares da edição são quase brancos, para melhorar a leitura.
 - No modo escuro, o cartão do título **Cadastrar nova atividade** ficou levemente mais claro, com sombra discreta.
 
-## Enviar informe (rascunho local)
+## Enviar informe (editor no estilo Outlook)
 
 Na página de atividades, abra **Extrair relatório**, configure o período/filtro e os campos e clique em **Enviar informe**, à direita da opção de período. A nova tela é aberta sobre o relatório, na mesma aba.
 
-- **E-mail:** informe destinatários, CC, remetente e assunto; acrescente a mensagem e confira o painel por status. O remetente é sugerido automaticamente quando o usuário logado contém um e-mail válido. Quando o login é somente um nome, informe o endereço; a conta efetiva de envio será definida pelo programa de e-mail instalado.
-- **Fluxo de trabalho Teams:** informe a equipe, canal e o nome do fluxo. O mesmo painel de status e o mesmo relatório analítico são apresentados. É possível copiar o informe formatado e abrir o Teams para colar.
+- **E-mail:** os campos **Para**, **Cc** e **Assunto** ficam em linhas, como no Outlook. O botão com aviãozinho fica à esquerda. O remetente é sugerido quando o usuário logado contém um e-mail válido; para logins com apenas nome, há o campo **De** opcional.
+- **Corpo da mensagem:** editor HTML com opções de negrito, itálico, sublinhado, tachado, listas, título e cor do texto. O próprio corpo contém o painel de status e os totais, sem um cartão de prévia separado.
+- **Anexo automático no rascunho local:** ao abrir a composição, o sistema prepara um **XLSX** com o mesmo filtro e colunas do relatório, mostra nome/tamanho e permite baixar. O exportador de XLSX também funciona offline utilizando a biblioteca JSZip distribuída com o sistema.
+- **Preparar e-mail:** baixa um arquivo **.eml** contendo destinatários, CC, assunto, corpo HTML com painel e a planilha XLSX incorporada como anexo MIME. Abra o arquivo no Outlook ou em outro cliente compatível. A maneira de abrir/editar um .eml pode variar conforme a versão do cliente.
+- **Fluxo de trabalho Teams:** informe equipe, canal e nome do fluxo; abra o Teams e copie o conteúdo da mensagem, baixando o anexo XLSX para incluí-lo manualmente.
 - **Dados:** os totais dos cartões e as atividades da planilha são obtidos da mesma seleção de **Extrair relatório**. “Usar filtro da tela” respeita a listagem visível, a ordem e a pesquisa; os demais períodos usam os status e analistas marcados.
-- **Arquivo:** **Baixar planilha analítica** gera XLSX com cabeçalho roxo e histórico quando as bibliotecas do Excel estão disponíveis. Em modo offline sem as bibliotecas, baixa CSV, preservando as mesmas colunas e atividades.
 
-**Limitação importante:** o sistema ainda funciona somente no navegador, sem conta Microsoft 365 conectada. **Preparar rascunho** baixa a planilha e abre o aplicativo de e-mail com assunto, destinatários e resumo em texto; o usuário anexa a planilha e pode colar os cartões formatados via **Copiar informe formatado**. Em Teams, o conteúdo pode ser copiado e anexado manualmente. Nenhuma mensagem é enviada sem a ação do usuário no programa de destino. O envio direto com anexo e a publicação automática em um fluxo precisarão da futura integração autenticada com Microsoft 365/Teams.
+**Limitação importante:** o sistema ainda não possui autenticação Microsoft 365 nem envia mensagens diretamente. O arquivo .eml é um rascunho com anexo, não uma mensagem enviada. Se a versão do Outlook não permitir abrir .eml para edição, baixe o XLSX pelo botão **Baixar anexo** e anexe-o manualmente em uma nova mensagem. O envio direto e a publicação automática em fluxo dependerão da futura integração com Microsoft 365/Teams.
