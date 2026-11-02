@@ -88,3 +88,12 @@ mas confira os links e os prints após mudar a estrutura do modelo.
 18 áreas em `Log_Before`, 19 em `Log_After` e 15 em `Relatorio Fotografico`.
 Testes de exportação incluíram imagens em colunas paralelas e uma aba criada
 no editor; os arquivos gerados foram reabertos como planilhas Excel.
+
+## Importar novas atividades e atualizar atividades existentes
+
+- Em **Configurar projeto → Cadastrar nova atividade → Importar planilha**, selecione CSV, TSV, XLS, XLSX, XLSM ou ODS. A prévia informa quantas linhas possuem ID VGR válido, quantas atividades são novas, quantas já existem no sistema e quantos IDs se repetem dentro da própria planilha. Clique no botão **Confirmar importação** (ícone de visto) para cadastrar somente as novas.
+- Ao confirmar a importação, abre-se automaticamente **Editar atividade**. As atividades do último lote importado recebem uma etiqueta discreta **Nova**. A etiqueta vale para a sessão atual do navegador e é substituída no próximo lote.
+- Em **Configurar projeto → Editar atividade → Atualizar atividades**, selecione outra planilha. A atualização encontra atividades existentes pelo **ID VGR**, independentemente da posição das colunas, e permite conferir a quantidade encontrada antes de confirmar. Após confirmar, a quantidade efetivamente alterada é exibida.
+- A atualização é não destrutiva: colunas ausentes, valores em branco, eventos de histórico e dados de runbook já salvos são preservados. Campos presentes e preenchidos na planilha têm prioridade, inclusive sobre alterações anteriores da mesma coluna. IDs VGR não encontrados não geram novas atividades nesse segundo fluxo.
+- O **ID VGR** é obrigatório para importar ou atualizar em lote; os cabeçalhos aceitam diferenças de maiúsculas/minúsculas, acentos e pontuação. O sistema reconhece colunas como Status, Analista, Observações, Horário de início, Horário de término e os campos do projeto. Dados permanecem apenas no armazenamento local do navegador.
+- A importação do **Modelo de planilha do projeto** também verifica IDs VGR para evitar cadastro duplicado.

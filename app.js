@@ -180,9 +180,11 @@ function activityDetail(id,mode='view',adminMode=false){
  for(const section of (project()?.data?.extraSections||[])){if(!groups.some(g=>g[0]===section))groups.push([section,extraDefinitions.filter(f=>f.section===section).map(f=>f.name)])}
  const visibleGroups=groups.filter(g=>g[1].length&&!(project()?.data?.removedDefaultSections||[]).includes(g[0]));
  const finalStatus=['Migrada','Quebra'].includes(d.status);
+ const activityStatusOptions=[...(d.status==='Pendente'?['Pendente']:[]),'Contatando técnico','Iniciando configuração','Finalizando configuração','Aguardando cliente config Fortinet','Organização de Rack e equipamentos','Migrada','Quebra'];
+ if(d.status&&!activityStatusOptions.includes(d.status))activityStatusOptions.unshift(d.status);
  return `<div class="activity-detail-screen"><div class="detailhead detail-toolbar"><button class="secondary" id="closeDetail">← ${adminMode?'Voltar à lista':'Voltar à busca'}</button><div class="admin-detail-toolbar-right"><span class="status ${esc(normStatus(d.status))}">${esc(d.status||'Pendente')}</span>${adminMode?`<button type="button" class="danger-project admin-delete-activity" id="adminDeleteActivity">Excluir atividade</button>`:''}</div></div>
  <section class="activity-summary"><div class="eyebrow">ID VGR</div><h2>${esc(activityName(a))}</h2><p class="muted">Analista: ${esc(d.analystName||'—')} · Data: ${esc(d.startAt?new Date(d.startAt).toLocaleDateString('pt-BR'):'—')} · Início: ${esc(d.startAt?new Date(d.startAt).toLocaleTimeString('pt-BR'):'—')} · Tempo: ${esc(elapsed(d.startAt)||'—')}${completionLabel(a)?` · ${esc(completionLabel(a))}`:''}</p>
- <div class="activity-summary-layout"><div class="activity-summary-controls"><div class="field"><label>Status da atividade</label><select id="activityStatus" ${canEdit?'':'disabled'}>${[...(d.status==='Pendente'?['Pendente']:[]),'Contatando técnico','Iniciando configuração','Finalizando configuração','Aguardando cliente config Fortinet','Organização de Rack e equipamentos','Migrada','Quebra'].map(st=>`<option ${d.status===st?'selected':''} ${st==='Pendente'?'disabled':''}>${st}</option>`).join('')}</select></div>
+ <div class="activity-summary-layout"><div class="activity-summary-controls"><div class="field"><label>Status da atividade</label><select id="activityStatus" ${canEdit?'':'disabled'}>${activityStatusOptions.map(st=>`<option ${d.status===st?'selected':''} ${st==='Pendente'?'disabled':''}>${st}</option>`).join('')}</select></div>
  <div class="field activity-observations ${finalStatus?'':'hidden'}" id="activityObservationsWrap"><label for="activityObservations">Observações da atividade</label><textarea id="activityObservations" rows="3" placeholder="Registre observações, detalhes da migração ou motivo da quebra..." ${canEdit?'':'readonly'}>${esc(d.observations||'')}</textarea><span class="small muted">Campo para textos longos. Salvamento automático.</span></div>
  <div class="filters">${adminMode?'':(!d.analystName?`<button id="adoptActivity">Adotar atividade</button>`:canEdit&&!d.endAt?`<button class="danger" id="abandonActivity">Abandonar atividade</button>`:"")}</div></div>
  <div class="activity-history"><h3>Histórico</h3><div class="activity-history-list">${(d.history||[]).map((h,i)=>({...h,originalIndex:i})).filter(h=>['Migrada','Quebra','Abandonada'].includes(h.status)).map(h=>`<button type="button" class="history-link" data-history="${h.originalIndex}">${esc(new Date(h.at).toLocaleString('pt-BR'))} · ${esc(h.analyst||'—')} · ${esc(h.status||'—')}</button>`).join('')||'<span class="small muted">Nenhuma conclusão registrada nesta atividade.</span>'}</div></div>
@@ -286,6 +288,106 @@ function allProjectFieldNames(p){
  const removed=new Set((p.data.removedProjectFields||[]).map(x=>String(x).trim().toLocaleLowerCase('pt-BR')));
  const seen=new Set();return entries.filter(x=>{if(typeof x!=='string'||!x.trim()||x.startsWith('_'))return false;const key=x.trim().toLocaleLowerCase('pt-BR');if(removed.has(key)||seen.has(key))return false;seen.add(key);return true});
 }
+// Importações por ID VGR: os nomes das colunas podem variar na ordem,
+// acentuação, espaços e pontuação sem afetar a correspondência dos campos.
+function importColumnKey(value){return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]/g,'')}
+function importVgrKey(value){return String(value??'').trim().replace(/\s+/g,'').toLocaleLowerCase('pt-BR')}
+function importVgrHeader(headers){return headers.find(h=>['idvgr','vgr','codigovgr','numerovgr','nrovgr'].includes(importColumnKey(h)))}
+function activityVgrKey(a){const r=a.data?.row||{},ed=a.data?.ed||{};const key=Object.keys({...r,...ed}).find(k=>importColumnKey(k)==='idvgr');return importVgrKey(key?(ed[key]??r[key]):'')}
+function prepareActivitySpreadsheet(data,p,mode){
+ const idHeader=importVgrHeader(data.headers||[]);
+ if(!idHeader)throw Error('A planilha deve conter a coluna ID VGR para identificar cada atividade.');
+ const existing=new Map((mode==='new'?arr('activities'):projectActivities()).filter(a=>mode==='new'||a.data.projectId===p.id||String(a.data.row?.EMPRESA||'').toLocaleLowerCase('pt-BR')===getName(p).toLocaleLowerCase('pt-BR')).map(a=>[activityVgrKey(a),a]).filter(([key])=>key));
+ const seen=new Set(),entries=[];let missing=0,repeated=0,already=0,notFound=0;
+ for(const row of data.rows){
+  const key=importVgrKey(row[idHeader]);if(!key){missing++;continue}
+  if(seen.has(key)){repeated++;continue}seen.add(key);
+  const match=existing.get(key);
+  if(mode==='new'&&match){already++;continue}
+  if(mode==='update'&&!match){notFound++;continue}
+  entries.push({key,row,activity:match||null});
+ }
+ return {idHeader,entries,unique:seen.size,missing,repeated,already,notFound,total:data.rows.length};
+}
+function importedStatus(value){
+ const key=importColumnKey(value);
+ const exact=[...activeStatuses,'Pendente','Migrada','Quebra','Abandonada'].find(s=>importColumnKey(s)===key);
+ if(exact)return exact;
+ if(['migradas','concluida','concluido','concluidas','concluidos'].includes(key))return 'Migrada';
+ if(['quebrada','quebradas','quebrado','quebrados','quebra'].includes(key))return 'Quebra';
+ if(['emandamento','andamento'].includes(key))return 'Em andamento';
+ if(['abandonaratividade','abandonado'].includes(key))return 'Abandonada';
+ return null;
+}
+function importedDate(value){
+ const str=String(value??'').trim();if(!str)return null;
+ const match=str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+ const date=match?new Date(+match[3],+match[2]-1,+match[1],+(match[4]||0),+(match[5]||0),+(match[6]||0)):new Date(str);
+ if(Number.isNaN(date.getTime())||match&&(date.getDate()!==+match[1]||date.getMonth()!==+match[2]-1))return null;
+ return date.toISOString();
+}
+function mergeImportedActivityFields(a,row,p,idHeader){
+ const data=a.data,existing=data.row||(data.row={}),editable=data.ed||{},known=new Map(allProjectFieldNames(p).map(k=>[importColumnKey(k),k]));
+ for(const key of Object.keys(existing))known.set(importColumnKey(key),key);
+ let changed=false;
+ const assign=(target,key,value)=>{if(target[key]!==value){target[key]=value;changed=true}};
+ for(const [header,raw] of Object.entries(row)){
+  const value=String(raw??'').trim();if(!value||header===idHeader)continue; // vazios não apagam dados atuais
+  const normalized=importColumnKey(header);
+  if(['status','statusdaatividade','situacao','situacaodaatividade'].includes(normalized)){
+   const next=importedStatus(value);if(next)assign(data,'status',next);continue;
+  }
+  if(['analista','nomedoanalista','nomedoanalistadaatividade','responsavelpelaatividade'].includes(normalized)){
+   assign(data,'analystName',value);assign(data,'analystId',value);continue;
+  }
+  if(['observacao','observacoes','observacoesdaatividade','motivo'].includes(normalized)){
+   assign(data,'observations',value);continue;
+  }
+  if(['horariodeinicio','datadeinicio','inicioem','inicioatividade'].includes(normalized)){
+   const date=importedDate(value);if(date)assign(data,'startAt',date);continue;
+  }
+  if(['horariodetermino','datadetermino','terminoem','fimatividade'].includes(normalized)){
+   const date=importedDate(value);if(date)assign(data,'endAt',date);continue;
+  }
+  if(['historico'].includes(normalized))continue; // log de eventos existente permanece intacto
+  const target=known.get(normalized)||header.trim();
+  assign(existing,target,value);
+  for(const edKey of Object.keys(editable))if(importColumnKey(edKey)===normalized)assign(editable,edKey,value);
+  if(!known.has(normalized)){
+   known.set(normalized,target);p.data.activityTemplate=p.data.activityTemplate||[];
+   if(!p.data.activityTemplate.some(name=>importColumnKey(name)===normalized))p.data.activityTemplate.push(target);
+  }
+ }
+ return changed;
+}
+function commitNewActivitySpreadsheet(p,data,prepared){
+ const batch='batch_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),created=[];
+ const templateBefore=[...(p.data.activityTemplate||[])];
+ for(const {row} of prepared.entries){
+  const fields={};for(const [header,value] of Object.entries(row))fields[header]=String(value??'').trim();
+  fields['ID VGR']=String(row[prepared.idHeader]).trim();
+  const activity={id:'imp_'+Date.now()+'_'+created.length+'_'+Math.random().toString(36).slice(2,7),data:{projectId:p.id,row:{'ID VGR':fields['ID VGR']},status:'Pendente',analystName:null,analystId:null,startAt:null,endAt:null,importBatch:batch,createdAt:new Date().toISOString()}};
+  mergeImportedActivityFields(activity,fields,p,prepared.idHeader);
+  created.push(activity);
+ }
+ DB.activities.push(...created);
+ try{save()}catch(err){DB.activities.splice(DB.activities.length-created.length,created.length);p.data.activityTemplate=templateBefore;throw err}
+ sessionStorage.setItem('gi_latest_import_'+p.id,batch);
+ log('Atividades importadas',`${getName(p)}: ${created.length} novas · ${prepared.already} já existentes · ${prepared.repeated} repetidas`);
+ return created.length;
+}
+function commitUpdatedActivitySpreadsheet(p,prepared){
+ const backups=prepared.entries.map(({activity})=>({activity,data:JSON.parse(JSON.stringify(activity.data))}));
+ const templateBefore=[...(p.data.activityTemplate||[])];let updated=0,unchanged=0;
+ for(const {activity,row} of prepared.entries){
+  if(mergeImportedActivityFields(activity,row,p,prepared.idHeader)){activity.data.updatedAt=new Date().toISOString();updated++}else unchanged++;
+ }
+ try{save()}catch(err){for(const {activity,data} of backups)activity.data=data;p.data.activityTemplate=templateBefore;throw err}
+ log('Atividades atualizadas por planilha',`${getName(p)}: ${updated} alteradas · ${unchanged} sem mudanças · ${prepared.notFound} não encontradas`);
+ return {updated,unchanged};
+}
+const importSheetIcon='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h10l4 4v14H5zM15 3v5h4M8 12h8M8 16h8"/></svg>';
+const importCheckIcon='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>';
 function openNewActivityDialog(p){
  const template=p.data.activityTemplate||[];
  const extras=(p.data.extraFields||[]).map(f=>typeof f==='string'?{name:f,section:'Outras informações'}:f);
@@ -294,16 +396,28 @@ function openNewActivityDialog(p){
  const sections=['Equipamento','Link','Localização / Unidade','Outras informações',...(p.data.extraSections||[])].filter(x=>!(p.data.removedDefaultSections||[]).includes(x));
  const group=k=>{const e=extras.find(f=>f.name===k);if(e)return e.section==='Localização'?'Localização / Unidade':e.section;const n=k.toUpperCase();if(/TÉCNICO|RESPONSÁVEL/.test(n))return 'Outras informações';if(/ENDEREÇO|COORDENADAS|EMPRESA|FORTINET|MUNICIPIO|MUNICÍPIO/.test(n))return 'Localização / Unidade';if(/UNIDADE|CLONAR/.test(n))return 'Equipamento';if(/LINK|DEDICADO|INTERNET|VELOCIDADE|OPERADORA|PRODUTO|MEIOS|^LP$|ATENDIMENTO/.test(n))return 'Link';return 'Equipamento'};
  const overlay=document.createElement('div');overlay.className='history-overlay new-activity-overlay';
- overlay.innerHTML=`<div class="history-dialog new-activity-dialog" role="dialog" aria-modal="true" aria-label="Cadastrar nova atividade"><div class="new-activity-head"><h2>Cadastrar nova atividade</h2><button type="button" class="new-activity-close" id="cancelNewActivity" aria-label="Fechar formulário" title="Fechar"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6L18 18M18 6L6 18"/></svg></button></div><form id="newActivityForm">${sections.map(section=>{const keys=names.filter(k=>group(k)===section);if(!keys.length)return '';return `<section class="new-activity-section"><h3 class="new-activity-section-title">${esc(section)}</h3><div class="new-activity-grid">${keys.map(k=>`<label class="field"><span>${esc(k)}</span><input data-newfield="${esc(k)}" placeholder=""></label>`).join('')}</div></section>`}).join('')}<div class="new-activity-footer"><button type="submit">Cadastrar atividade</button></div></form></div>`;
+ overlay.innerHTML=`<div class="history-dialog new-activity-dialog" role="dialog" aria-modal="true" aria-label="Cadastrar nova atividade"><div class="new-activity-head"><h2>Cadastrar nova atividade</h2><div class="new-activity-head-actions"><label class="activity-import-file">${importSheetIcon} Importar planilha<input type="file" id="newActivitySpreadsheet" accept=".csv,.tsv,.txt,.xls,.xlsx,.xlsm,.ods"></label><button type="button" class="new-activity-close" id="cancelNewActivity" aria-label="Fechar formulário" title="Fechar"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6L18 18M18 6L6 18"/></svg></button></div></div><div class="activity-import-preview" id="newActivityImportPreview" aria-live="polite"></div><form id="newActivityForm">${sections.map(section=>{const keys=names.filter(k=>group(k)===section);if(!keys.length)return '';return `<section class="new-activity-section"><h3 class="new-activity-section-title">${esc(section)}</h3><div class="new-activity-grid">${keys.map(k=>`<label class="field"><span>${esc(k)}</span><input data-newfield="${esc(k)}" placeholder=""></label>`).join('')}</div></section>`}).join('')}<div class="new-activity-footer"><button type="submit">Cadastrar atividade</button></div></form></div>`;
  document.body.appendChild(overlay);overlay.querySelector('#cancelNewActivity').onclick=()=>overlay.remove();overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};
- overlay.querySelector('#newActivityForm').onsubmit=e=>{e.preventDefault();const row={};overlay.querySelectorAll('[data-newfield]').forEach(el=>row[el.dataset.newfield]=el.value.trim());if(!Object.values(row).some(Boolean))return toast('Preencha ao menos um campo');DB.activities.push({id:'manual_'+Date.now(),data:{projectId:p.id,row,status:'Pendente',analystName:null,analystId:null,startAt:null,endAt:null}});log('Atividade cadastrada manualmente',getName(p));save();overlay.remove();toast('Atividade cadastrada');renderAdmin()};
+ const preview=overlay.querySelector('#newActivityImportPreview');
+ overlay.querySelector('#newActivitySpreadsheet').onchange=async e=>{
+  const file=e.target.files?.[0];if(!file)return;preview.innerHTML='<p>Conferindo IDs VGR da planilha…</p>';
+  try{
+   const data=await readTabularFile(file),prepared=prepareActivitySpreadsheet(data,p,'new');
+   preview.innerHTML=`<div class="import-summary"><b>${esc(file.name)}</b><span>${prepared.total} linha(s) lidas · ${prepared.unique} ID(s) VGR único(s)</span><strong>${prepared.entries.length} nova(s) atividade(s) para importar</strong><span>${prepared.already} já cadastrada(s) · ${prepared.repeated} repetida(s) na planilha · ${prepared.missing} sem ID VGR</span></div><button type="button" class="import-confirm" id="confirmNewActivities" ${prepared.entries.length?'':'disabled'}>${importCheckIcon} Confirmar importação</button>`;
+   preview.querySelector('#confirmNewActivities').onclick=()=>{
+    try{const checked=prepareActivitySpreadsheet(data,p,'new');if(!checked.entries.length)return toast('Nenhuma atividade nova para importar');const count=commitNewActivitySpreadsheet(p,data,checked);overlay.remove();toast(`${count} atividade(s) importada(s). ${checked.already} já existia(m).`);openAdminActivityEditor()}
+    catch(err){preview.insertAdjacentHTML('beforeend',`<p class="activity-import-error">Falha ao importar: ${esc(err.message)}</p>`)}
+   };
+  }catch(err){preview.innerHTML=`<p class="activity-import-error">Não foi possível preparar a importação: ${esc(err.message)}</p>`}
+ };
+ overlay.querySelector('#newActivityForm').onsubmit=e=>{e.preventDefault();const row={};overlay.querySelectorAll('[data-newfield]').forEach(el=>row[el.dataset.newfield]=el.value.trim());if(!Object.values(row).some(Boolean))return toast('Preencha ao menos um campo');const key=importVgrKey(row[Object.keys(row).find(k=>importColumnKey(k)==='idvgr')]);if(!key)return toast('Informe o ID VGR da atividade');if(arr('activities').some(a=>activityVgrKey(a)===key))return toast('Já existe uma atividade cadastrada com esse ID VGR');DB.activities.push({id:'manual_'+Date.now(),data:{projectId:p.id,row,status:'Pendente',analystName:null,analystId:null,startAt:null,endAt:null}});log('Atividade cadastrada manualmente',getName(p));save();overlay.remove();toast('Atividade cadastrada');renderAdmin()};
 }
 // Pesquisa/edição administrativa em uma sobreposição. Não altera o usuário responsável
 // nem adota atividades; a exclusão só ocorre após confirmação explícita do ID VGR.
 function openAdminActivityEditor(){
  if(!isAdmin()||!project())return toast('Acesso exclusivo do administrador');
  const editingProject=projectId;
- let selectedId=null,query='',limit=200;
+ let selectedId=null,query='',limit=200,stagedUpdate=null,updateMessage='';
  const layer=document.createElement('div');layer.className='admin-activity-overlay';
  layer.innerHTML=`<div class="admin-activity-dialog" role="dialog" aria-modal="true" aria-labelledby="adminActivityDialogTitle"><header class="admin-activity-header"><div><h2 id="adminActivityDialogTitle">Editar atividade</h2><p>Pesquise e consulte todas as atividades deste projeto.</p></div><button type="button" class="admin-activity-close" title="Fechar" aria-label="Fechar janela de edição"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header><div class="admin-activity-content"></div></div>`;
  document.body.appendChild(layer);
@@ -318,9 +432,19 @@ function openAdminActivityEditor(){
   selectedId=null;
   const all=newestActivities(projectActivities());
   const matching=all.filter(a=>activitySearchMatches(a,query.trim().toLocaleLowerCase('pt-BR')));
-  body.innerHTML=`<div class="admin-search-heading"><h3>Buscar atividade</h3><span class="small muted">${matching.length} de ${all.length} atividade(s)</span></div><input class="admin-activity-search" type="search" placeholder="Buscar por ID, ID do link, ID VGR, analista, status ou endereço" value="${esc(query)}" aria-label="Buscar atividade"/><p class="small muted">Todas as datas e todos os status · mais recentes primeiro</p><div class="admin-activity-results">${matching.slice(0,limit).map(a=>{
+  body.innerHTML=`<section class="admin-update-activities"><div class="admin-update-heading"><div><h3>Atualizar atividades</h3><p class="small muted">Atualize apenas atividades existentes pelo ID VGR. Colunas ausentes ou células vazias preservam os dados atuais.</p></div><label class="activity-import-file">${importSheetIcon} Importar planilha<input type="file" id="updateActivitiesSpreadsheet" accept=".csv,.tsv,.txt,.xls,.xlsx,.xlsm,.ods"></label></div><div id="updateActivitiesPreview" class="activity-import-preview" aria-live="polite">${updateMessage?`<p class="import-updated-message">${esc(updateMessage)}</p>`:''}</div></section><div class="admin-search-heading"><h3>Buscar atividade</h3><span class="small muted">${matching.length} de ${all.length} atividade(s)</span></div><input class="admin-activity-search" type="search" placeholder="Buscar por ID, ID do link, ID VGR, analista, status ou endereço" value="${esc(query)}" aria-label="Buscar atividade"/><p class="small muted">Todas as datas e todos os status · mais recentes primeiro</p><div class="admin-activity-results">${matching.slice(0,limit).map(a=>{
    const d=a.data||{},r=d.row||{},status=d.status||'Pendente',done=completionLabel(a);
-   return `<div class="activity-line admin-edit-activity-line" data-admin-view="${esc(a.id)}" tabindex="0" role="button" aria-label="Abrir atividade ${esc(activityName(a))}"><div class="activity-main"><b>${esc(activityName(a))}</b><div class="small muted">${esc(r['ENDEREÇO COMPLETO']||r.HOSTNAME||r.EMPRESA||'Atividade')}</div></div><div class="activity-meta"><span class="activity-completion-date">${esc(done)}</span><span class="elapsed">${esc(d.startAt?elapsed(d.startAt):'')}</span><span class="owner" title="${esc(d.analystName||'')}">${esc(d.analystName||'—')}</span></div><span class="status ${esc(normStatus(status))}">${esc(status)}</span><button type="button" data-admin-open="${esc(a.id)}">Abrir atividade</button></div>`}).join('')||'<div class="empty">Nenhuma atividade encontrada.</div>'}</div>${matching.length>limit?`<div class="admin-activity-load"><button type="button" class="secondary" id="adminActivityMore">Mostrar mais (${Math.min(matching.length-limit,200)})</button></div>`:''}`;
+   const recent=d.importBatch&&d.importBatch===sessionStorage.getItem('gi_latest_import_'+editingProject);
+   return `<div class="activity-line admin-edit-activity-line" data-admin-view="${esc(a.id)}" tabindex="0" role="button" aria-label="Abrir atividade ${esc(activityName(a))}"><div class="activity-main"><b>${esc(activityName(a))}</b>${recent?'<span class="activity-new-tag">Nova</span>':''}<div class="small muted">${esc(r['ENDEREÇO COMPLETO']||r.HOSTNAME||r.EMPRESA||'Atividade')}</div></div><div class="activity-meta"><span class="activity-completion-date">${esc(done)}</span><span class="elapsed">${esc(d.startAt?elapsed(d.startAt):'')}</span><span class="owner" title="${esc(d.analystName||'')}">${esc(d.analystName||'—')}</span></div><span class="status ${esc(normStatus(status))}">${esc(status)}</span><button type="button" data-admin-open="${esc(a.id)}">Abrir atividade</button></div>`}).join('')||'<div class="empty">Nenhuma atividade encontrada.</div>'}</div>${matching.length>limit?`<div class="admin-activity-load"><button type="button" class="secondary" id="adminActivityMore">Mostrar mais (${Math.min(matching.length-limit,200)})</button></div>`:''}`;
+  const updatePreview=body.querySelector('#updateActivitiesPreview');
+  if(stagedUpdate){updatePreview.innerHTML=stagedUpdate.preview;updatePreview.querySelector('#confirmUpdatedActivities').onclick=()=>{
+   try{if(!inProject())return;const checked=prepareActivitySpreadsheet(stagedUpdate.data,project(),'update'),result=commitUpdatedActivitySpreadsheet(project(),checked);updateMessage=`Atualização concluída: ${result.updated} atividade(s) atualizada(s); ${result.unchanged} sem alteração; ${checked.notFound} não encontrada(s).`;stagedUpdate=null;renderList();toast(`${result.updated} atividade(s) atualizada(s) com sucesso`)}catch(err){updatePreview.insertAdjacentHTML('beforeend',`<p class="activity-import-error">Falha ao atualizar: ${esc(err.message)}</p>`)}
+  }}
+  body.querySelector('#updateActivitiesSpreadsheet').onchange=async e=>{
+   const file=e.target.files?.[0];if(!file)return;stagedUpdate=null;updatePreview.innerHTML='<p>Lendo planilha e conferindo atividades…</p>';
+   try{const data=await readTabularFile(file),prepared=prepareActivitySpreadsheet(data,project(),'update');const preview=`<div class="import-summary"><b>${esc(file.name)}</b><span>${prepared.total} linha(s) · ${prepared.unique} ID(s) VGR único(s)</span><strong>${prepared.entries.length} atividade(s) encontrada(s) no projeto</strong><span>${prepared.notFound} não encontrada(s) · ${prepared.repeated} repetida(s) na planilha · ${prepared.missing} sem ID VGR</span></div><button type="button" id="confirmUpdatedActivities" class="import-confirm" ${prepared.entries.length?'':'disabled'}>${importCheckIcon} Confirmar atualização</button>`;stagedUpdate={data,preview};updatePreview.innerHTML=preview;updatePreview.querySelector('#confirmUpdatedActivities').onclick=()=>{try{const checked=prepareActivitySpreadsheet(data,project(),'update'),result=commitUpdatedActivitySpreadsheet(project(),checked);updateMessage=`Atualização concluída: ${result.updated} atividade(s) atualizada(s); ${result.unchanged} sem alteração; ${checked.notFound} não encontrada(s).`;stagedUpdate=null;renderList();toast(`${result.updated} atividade(s) atualizada(s) com sucesso`)}catch(err){updatePreview.insertAdjacentHTML('beforeend',`<p class="activity-import-error">Falha ao atualizar: ${esc(err.message)}</p>`)}};
+   }catch(err){updatePreview.innerHTML=`<p class="activity-import-error">Não foi possível preparar a atualização: ${esc(err.message)}</p>`}
+  };
   const search=body.querySelector('.admin-activity-search');
   search.oninput=()=>{const caret=search.selectionStart;query=search.value;limit=200;renderList();const replacement=body.querySelector('.admin-activity-search');replacement.focus();try{replacement.setSelectionRange(caret,caret)}catch(e){}};
   const go=id=>{selectedId=id;renderDetail()};
@@ -490,8 +614,9 @@ if(adminTab==='Configurar projeto'){
    try{
      stagedActivity=await readTabularFile(file);
      if(!stagedActivity.headers.length)throw Error('Não encontrei cabeçalhos.');
-     $('#projectPreview').innerHTML=`<p><b>Prévia detectada:</b> ${stagedActivity.rows.length} linhas · ${stagedActivity.headers.length} campos</p><div class="small">${stagedActivity.headers.map(esc).join(' · ')}</div><button id="confirmProjectImport">OK — aplicar modelo e importar atividades</button>`;
-     $('#confirmProjectImport').onclick=()=>{let data=stagedActivity;p.data.activityTemplate=data.headers;p.data.extraFields=p.data.extraFields||[];let added=0;data.rows.forEach(row=>{if(!Object.values(row).some(v=>String(v??'').trim()))return;DB.activities.push({id:'imp_'+Date.now()+'_'+added,data:{projectId:p.id,row,status:'Pendente',analystName:null,analystId:null,startAt:null,endAt:null}});added++});save();log('Modelo de projeto importado',`${getName(p)}: ${added} atividades`);toast(`Modelo aplicado: ${data.headers.length} campos e ${added} atividades`);renderAdmin()};
+     const checked=prepareActivitySpreadsheet(stagedActivity,p,'new');
+     $('#projectPreview').innerHTML=`<p><b>Prévia detectada:</b> ${stagedActivity.rows.length} linhas · ${stagedActivity.headers.length} campos · <strong>${checked.entries.length} atividades novas</strong> · ${checked.already} já cadastradas · ${checked.repeated} repetidas.</p><div class="small">${stagedActivity.headers.map(esc).join(' · ')}</div><button id="confirmProjectImport">OK — aplicar modelo e importar atividades</button>`;
+     $('#confirmProjectImport').onclick=()=>{const data=stagedActivity;if(!data)return;try{const current=prepareActivitySpreadsheet(data,p,'new');const old=p.data.activityTemplate;p.data.activityTemplate=[...data.headers];p.data.extraFields=p.data.extraFields||[];try{const added=commitNewActivitySpreadsheet(p,data,current);log('Modelo de projeto importado',`${getName(p)}: ${added} atividades`);toast(`Modelo aplicado: ${data.headers.length} campos e ${added} atividades novas; ${current.already} duplicada(s) ignorada(s).`);renderAdmin()}catch(err){p.data.activityTemplate=old;throw err}}catch(err){$('#projectPreview').insertAdjacentHTML('beforeend',`<p class="activity-import-error">${esc(err.message)}</p>`)}};
    }catch(err){stagedActivity=null;$('#projectPreview').textContent='Não foi possível ler esse arquivo. Confira se é uma planilha válida e tente novamente. Detalhe: '+err.message}
  };
  $('#projectRunbook').onchange=async e=>{
@@ -557,8 +682,8 @@ if(adminTab==='Configurar projeto'){
 
 }
 }
-async function readTabularFile(file){if(!file)throw Error('Nenhum arquivo selecionado');let ext=(file.name.split('.').pop()||'').toLowerCase(),matrix=[];if(['xls','xlsx','xlsm','ods'].includes(ext)){if(!window.XLSX)throw Error('Biblioteca de leitura de planilhas indisponível; confira a conexão com a internet.');let wb=XLSX.read(await file.arrayBuffer(),{type:'array'});matrix=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:false});}else if(ext==='docx'||ext==='doc'){if(!window.mammoth)throw Error('Biblioteca DOCX indisponível; confira a conexão com a internet.');let result=await mammoth.convertToHtml({arrayBuffer:await file.arrayBuffer()});let doc=new DOMParser().parseFromString(result.value,'text/html');let table=doc.querySelector('table');if(table)matrix=[...table.rows].map(tr=>[...tr.cells].map(td=>td.textContent.trim()));else matrix=result.value.replace(/<[^>]+>/g,'\n').split(/\n+/).map(x=>[x.trim()]).filter(r=>r[0]);}else{let text=await file.text();if(text.includes('\u0000'))throw Error('Formato não suportado como texto. Tente exportar a planilha como XLSX ou CSV.');matrix=parseCSV(text)}matrix=matrix.filter(r=>Array.isArray(r)&&r.some(v=>String(v??'').trim()));if(matrix.length<1)throw Error('Arquivo vazio.');let headers=matrix[0].map((h,i)=>String(h??'').trim()||`Campo ${i+1}`);let rows=matrix.slice(1).map(r=>Object.fromEntries(headers.map((h,i)=>[h,String(r[i]??'').trim()])));return {headers,rows}}
-function parseCSV(t){let out=[],row=[],cell='',q=false;for(let i=0;i<t.length;i++){let c=t[i];if(c==='"'&&q&&t[i+1]==='"'){cell+='"';i++}else if(c==='"')q=!q;else if((c===','||c===';'||c==='\\t')&&!q){row.push(cell);cell=''}else if((c==='\\n'||c==='\\r')&&!q){if(c==='\\r'&&t[i+1]==='\\n')i++;row.push(cell);out.push(row);row=[];cell=''}else cell+=c}if(cell||row.length){row.push(cell);out.push(row)}return out}
+async function readTabularFile(file){if(!file)throw Error('Nenhum arquivo selecionado');let ext=(file.name.split('.').pop()||'').toLowerCase(),matrix=[];if(['xls','xlsx','xlsm','ods'].includes(ext)){if(!window.XLSX)throw Error('Biblioteca de leitura de planilhas indisponível; confira a conexão com a internet.');let wb=XLSX.read(await file.arrayBuffer(),{type:'array'});matrix=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:false});}else if(ext==='docx'||ext==='doc'){if(!window.mammoth)throw Error('Biblioteca DOCX indisponível; confira a conexão com a internet.');let result=await mammoth.convertToHtml({arrayBuffer:await file.arrayBuffer()});let doc=new DOMParser().parseFromString(result.value,'text/html');let table=doc.querySelector('table');if(table)matrix=[...table.rows].map(tr=>[...tr.cells].map(td=>td.textContent.trim()));else matrix=result.value.replace(/<[^>]+>/g,'\n').split(/\n+/).map(x=>[x.trim()]).filter(r=>r[0]);}else{let text=await file.text();if(text.includes('\u0000'))throw Error('Formato não suportado como texto. Tente exportar a planilha como XLSX ou CSV.');matrix=parseCSV(text)}matrix=matrix.filter(r=>Array.isArray(r)&&r.some(v=>String(v??'').trim()));if(matrix.length<1)throw Error('Arquivo vazio.');const headerRow=matrix.slice(0,15).findIndex(r=>r.some(h=>['idvgr','vgr','codigovgr','numerovgr','nrovgr'].includes(importColumnKey(h))));if(headerRow>0)matrix=matrix.slice(headerRow);let headers=matrix[0].map((h,i)=>String(h??'').trim()||`Campo ${i+1}`);let rows=matrix.slice(1).map(r=>Object.fromEntries(headers.map((h,i)=>[h,String(r[i]??'').trim()])));return {headers,rows}}
+function parseCSV(t){let out=[],row=[],cell='',q=false;for(let i=0;i<t.length;i++){let c=t[i];if(c==='"'&&q&&t[i+1]==='"'){cell+='"';i++}else if(c==='"')q=!q;else if((c===','||c===';'||c==='\t')&&!q){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!q){if(c==='\r'&&t[i+1]==='\n')i++;row.push(cell);out.push(row);row=[];cell=''}else cell+=c}if(cell||row.length){row.push(cell);out.push(row)}return out}
 function downloadCSV(name,rows){let keys=[...new Set(rows.flatMap(o=>Object.keys(o||{})))];let csv=[keys,...rows.map(o=>keys.map(k=>{let v=o[k];if(v&&typeof v==='object')v=JSON.stringify(v);return '"'+String(v??'').replace(/"/g,'""')+'"'}))].map(r=>r.join(';')).join('\\r\\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
 // Reinicializacao unica dos dados de teste nesta versao publicada.
 // Mantem apenas a preferencia visual; nao altera dados de outros dominios.
