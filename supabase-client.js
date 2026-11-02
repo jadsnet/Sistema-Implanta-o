@@ -13,7 +13,12 @@
  function assertEmail(email){if(!/^[a-zA-Z0-9._%+\-]+@telefonica\.com$/i.test(String(email||'').trim()))
    throw new Error('É obrigatório usar um e-mail @telefonica.com.');return email.trim().toLowerCase();}
  function displayName(){return profile?.full_name?.trim()||profile?.email||'Usuário';}
- const nameKey=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+ const nameKey=value=>{
+   let normalized=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+   if(normalized.split(' ').length>=3)normalized=normalized.replace(/ emergencial$/,'');
+   if(normalized==='adriana silva alves dos santo')normalized='adriana silva alves dos santos';
+   return normalized;
+ };
  function userOwnsActivity(activity){
    if(!profile?.active||profile.must_change_password||!session?.id||!activity)return false;
    if(activity.ownerId)return activity.ownerId===session.id;

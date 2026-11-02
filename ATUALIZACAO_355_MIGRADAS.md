@@ -1,5 +1,17 @@
 # Atualização do Diário de Bordo — 355 migradas
 
+## Correção posterior: cronômetro e nomes de analistas
+
+- **Migrada** e **Quebra** não exibem nem atualizam o cronômetro, mesmo quando a planilha forneceu um horário de início. Na lista e no detalhe aparece a **data de conclusão** (com fallback para `DATA SDWAN` quando a data de término não existe).
+- O cronômetro é exibido **somente** para os status de **Em andamento** (incluindo Contatando técnico, Iniciando configuração e Finalizando configuração). O mesmo controle foi aplicado à busca de runbook e à edição administrativa.
+- A seleção de analistas consolida maiúsculas/minúsculas, variações de espaços, o sufixo de escala `- EMERGENCIAL` e o alias confirmado `ADRIANA SILVA ALVES DOS SANTO` → `ADRIANA SILVA ALVES DOS SANTOS`. `CESAR SOARES - EMERGENCIAL` fica `CESAR SOARES`.
+- Na linha de atividade, os nomes agora exibem **nome + primeiro sobrenome** relevante: `BRUNO COSTA` e `BRUNO NEVES` continuam sendo pessoas diferentes. Não se faz junção por semelhança vaga de nomes.
+- Os nomes importados novos são consolidados antes da gravação. A lista também consolida **dados já importados**, mesmo antes de uma nova importação; o banco normaliza as próximas gravações.
+
+### Supabase: nova migração necessária
+
+Após instalar este pacote, abra **SQL Editor** no Supabase e execute **`supabase/04_analistas_aliases.sql` uma vez**, depois de `03_vinculo_analistas.sql` (que já estava na versão anterior). O SQL mantém a equivalência dos nomes e a normalização **no servidor**, inclusive em chamadas diretas à API. O arquivo `supabase-config.js` continua ausente do ZIP para preservar a configuração existente.
+
 ## Ajustes na filtragem e na confirmação da planilha
 
 - O título **Resultados da filtragem customizada** agora mostra a quantidade exata de atividades filtradas por analista e/ou status, independentemente do limite inicial de linhas visíveis.

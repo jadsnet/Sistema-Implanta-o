@@ -67,6 +67,11 @@ vm.runInNewContext(source,ctx,{filename:'supabase-client.js'});
  assert.equal(cloud.userOwnsActivity({ownerId:'00000000-0000-4000-8000-000000000002',data:{analystName:'Ana Silva'}}),false,
    'owner_id determinado pelo servidor prevalece sobre igualdade do nome');
  assert.equal(cloud.userOwnsActivity({ownerId:user.id,data:{analystName:'Nome Antigo'}}),true);
+ profile.full_name='Adriana Silva Alves dos Santos';
+ assert.equal(cloud.userOwnsActivity({data:{analystName:'ADRIANA SILVA ALVES DOS SANTO'}}),true);
+ profile.full_name='Cesar Soares';
+ assert.equal(cloud.userOwnsActivity({data:{analystName:'CESAR SOARES - EMERGENCIAL'}}),true);
+ profile.full_name='Ana Silva';
  db.activities[0].data.row.HOSTNAME='Matriz';
  cloud.queueSave(db);await cloud.flush();
  assert.equal(calls.length,1);assert.equal(calls[0][0].op,'update');

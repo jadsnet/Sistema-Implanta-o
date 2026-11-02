@@ -4,6 +4,7 @@ const path=require('node:path');
 const vm=require('node:vm');
 const {spawnSync}=require('node:child_process');
 const source=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8');
+const analystHelpers=source.slice(source.indexOf('function analystNameKey('),source.indexOf('function renderUserPicker('));
 const helpers=source.slice(source.indexOf('// Importações por ID VGR:'),source.indexOf('const importSheetIcon='));
 const reader=source.slice(source.indexOf('async function readTabularFile('),source.indexOf('function downloadCSV('));
 
@@ -20,7 +21,7 @@ const context={console,Date,Math,Set,Map,JSON,DB:db,
  save(){saves++},log(){},sessionStorage:{setItem(){}},window:{},validateUpload:async()=> 'xlsx'};
 context.window=context;
 vm.createContext(context);
-vm.runInContext(helpers+reader,context,{filename:'app.js'});
+vm.runInContext(analystHelpers+helpers+reader,context,{filename:'app.js'});
 
 const realHeaders=['','Endereço de Instalação (base prévendas)','Município','Velocidade','MODELO EQUIPAMENTO','NETWORK','HOSTNAME','NET WORK PARA CLONAR','IP DEDICADO','ID VGR','STATUS SDWAN','DATA SDWAN','PARCEIRO','OPERADORA','HORARIO INICIO','HORÁRIO FIM','TEMPO DE DURAÇÃO','TKT NOC','STATUS NOC','OBS NOC','REDE LAN MERAKI','IP LAN MERAKI','SERIAL NUMBER','ANALISTA TÉCNICO','OBSERVAÇÃO'];
 const record=(id,status,day,partner,init,end,ticket,analyst,network='')=>{
@@ -87,10 +88,27 @@ context.XLSX={read(){return workbook},utils:{
  assert.ok(activities.slice(2).every(a=>a.data.status==='Migrada'));
  assert.equal(activities[2].data.ed.Parceiro,'DELFIA');
  assert.equal(activities[2].data.analystName,'JOÃO DA SILVA');
+ assert.equal(context.canonicalAnalystName('ADRIANA SILVA ALVES DOS SANTO'),'ADRIANA SILVA ALVES DOS SANTOS');
+ assert.equal(context.canonicalAnalystName('ADRIANA SILVA ALVES DOS SANTOS'),'ADRIANA SILVA ALVES DOS SANTOS');
+ assert.equal(context.canonicalAnalystName('CESAR SOARES - EMERGENCIAL'),'CESAR SOARES');
+ assert.equal(context.canonicalAnalystName('Cesar Soares'),'CESAR SOARES');
+ assert.equal(context.canonicalAnalystName('Jadson Rodrigues de Souza'),'JADSON RODRIGUES DE SOUZA');
+ assert.equal(context.canonicalAnalystName('JADSON RODRIGUES DE SOUZA'),'JADSON RODRIGUES DE SOUZA');
+ assert.notEqual(context.canonicalAnalystName('BRUNO COSTA SILVERIO'),context.canonicalAnalystName('BRUNO NEVES'));
+ assert.equal(context.analystListName('BRUNO COSTA SILVERIO'),'BRUNO COSTA');
+ assert.equal(context.analystListName('BRUNO NEVES'),'BRUNO NEVES');
+ assert.equal(context.analystListName('JANAINA DA SILVA BENEDITO'),'JANAINA SILVA');
+ const aliases=context.prepareActivitySpreadsheet({headers:['ID VGR','ANALISTA TÉCNICO'],rows:[
+  {'ID VGR':'alias-adriana','ANALISTA TÉCNICO':'ADRIANA SILVA ALVES DOS SANTO'},
+  {'ID VGR':'alias-cesar','ANALISTA TÉCNICO':'CESAR SOARES - EMERGENCIAL'},
+ ]},project,'update');
+ context.commitUpdatedActivitySpreadsheet(project,aliases);
+ assert.equal(activities.find(a=>a.data.row['ID VGR']==='alias-adriana').data.analystName,'ADRIANA SILVA ALVES DOS SANTOS');
+ assert.equal(activities.find(a=>a.data.row['ID VGR']==='alias-cesar').data.analystName,'CESAR SOARES');
  const repeated=context.prepareActivitySpreadsheet({headers:['ID VGR','STATUS SDWAN'],rows:[{'ID VGR':'2264093','STATUS SDWAN':'Migrado'}]},project,'update');
  assert.equal(repeated.notFound,0,'reimportação não deve tentar recriar um ID já cadastrado');
  assert.equal(context.commitUpdatedActivitySpreadsheet(project,repeated).created,0);
- assert.equal(activities.length,5,'reimportação não deve duplicar atividades');
+ assert.equal(activities.length,7,'reimportação não deve duplicar atividades');
  if(process.env.GI_TEST_WORKBOOK){
   const script=`import json,sys,openpyxl,datetime\nw=openpyxl.load_workbook(sys.argv[1],read_only=True,data_only=True)\nr=[]\nfor sh in w.worksheets:\n rows=[]\n for row in sh.iter_rows(max_col=min(sh.max_column,200),values_only=True):\n  rows.append([v.isoformat(sep=' ') if isinstance(v,datetime.datetime) else v.isoformat() if isinstance(v,(datetime.date,datetime.time)) else str(v) if v is not None else '' for v in row])\n r.append({'name':sh.title,'rows':rows})\nprint(json.dumps(r,ensure_ascii=False))`;
   const output=spawnSync('python3',['-c',script,process.env.GI_TEST_WORKBOOK],{encoding:'utf8',maxBuffer:8*1024*1024});
