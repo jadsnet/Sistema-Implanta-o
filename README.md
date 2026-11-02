@@ -97,3 +97,10 @@ no editor; os arquivos gerados foram reabertos como planilhas Excel.
 - A atualização é não destrutiva: colunas ausentes, valores em branco, eventos de histórico e dados de runbook já salvos são preservados. Campos presentes e preenchidos na planilha têm prioridade, inclusive sobre alterações anteriores da mesma coluna. IDs VGR não encontrados não geram novas atividades nesse segundo fluxo.
 - O **ID VGR** é obrigatório para importar ou atualizar em lote; os cabeçalhos aceitam diferenças de maiúsculas/minúsculas, acentos e pontuação. O sistema reconhece colunas como Status, Analista, Observações, Horário de início, Horário de término e os campos do projeto. Dados permanecem apenas no armazenamento local do navegador.
 - A importação do **Modelo de planilha do projeto** também verifica IDs VGR para evitar cadastro duplicado.
+
+### Apresentação compacta das importações
+
+- **Cadastrar nova atividade:** o botão Importar planilha fica fora do cartão do título; a prévia aparece somente no canto direito, em um cartão menor.
+- **Editar atividade → Atualizar atividades:** título e instruções permanecem à esquerda, sem cartão externo; o botão e a prévia ficam alinhados ao canto direito.
+- Quando uma planilha está selecionada, aparecem dois botões quadrados com ícones: **visto** para confirmar e **lixeira** para cancelar a seleção. A lixeira não apaga atividades nem desfaz importações já concluídas.
+- No modo claro, as prévias usam um roxo de maior contraste para facilitar a leitura.
