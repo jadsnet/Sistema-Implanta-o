@@ -33,8 +33,9 @@ assert.equal(unique.size,7,'variantes equivalentes deixam de duplicar o filtro d
 assert.equal(context.analystListName('BRUNO COSTA SILVERIO'),'BRUNO COSTA');
 assert.equal(context.analystListName('BRUNO NEVES'),'BRUNO NEVES');
 assert.match(app,/projectActivities\(\)\.map\(a=>canonicalAnalystName\(a\.data\.analystName\)\)/);
-assert.match(app,/canonicalAnalystName\(a\.data\.analystName\)\.toLocaleLowerCase/);
-assert.match(app,/runningActivityTime\(a\)\?`<span class="elapsed" data-start=/);
+assert.match(app,/function matchesAnalystFilter\(a\)/);
+assert.match(app,/canonicalAnalystName\(a\.data\?\.analystName\)\.toLocaleLowerCase/);
+assert.match(app,/listRunningTime\(a,st\)\?`<span class="elapsed" data-start=/);
 assert.match(sql,/create or replace function private\.gi_name_key/);
 assert.match(sql,/gi_analyst_canonical before insert or update/);
 assert.match(sql,/adriana silva alves dos santo/);

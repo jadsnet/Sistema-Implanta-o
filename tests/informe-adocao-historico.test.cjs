@@ -8,6 +8,9 @@ const css=fs.readFileSync(path.join(dir,'style.css'),'utf8');
 const sql=fs.readFileSync(path.join(dir,'supabase/06_reabrir_atividades_quebradas.sql'),'utf8');
 const snippet=[
  app.slice(app.indexOf('function normStatus('),app.indexOf('function getName(')),
+ app.slice(app.indexOf('function analystNameKey('),app.indexOf('function usableAnalystName(')),
+ app.slice(app.indexOf('function importedDateDay('),app.indexOf('function importedTime(')),
+ app.slice(app.indexOf('function localDay('),app.indexOf('// Ordenação única para a lista geral')),
  app.slice(app.indexOf('function filteredHomeActivities('),app.indexOf('function calculateMxIp('))
 ].join('\n');
 const reportHelper=app.slice(app.indexOf('// A opção "Usar filtro da tela"'),app.indexOf('// O SheetJS da aplicação'));
@@ -22,12 +25,15 @@ vm.createContext(context);
 vm.runInContext(snippet+'\n'+reportHelper+'\n'+summary,context,{filename:'app.js'});
 const selection=context.reportVisibleActivities(mock);
 assert.equal(selection.length,1191,'Total geral não pode ser limitado aos primeiros 200 elementos do DOM');
+assert.equal(context.calculateHomeStatusCounts(mock).Pendente,836,'o saldo de pendentes inclui as 14 quebras');
 const result=context.informeSummary({p:{data:{name:'Copasa'}},rows:selection});
 assert.equal(result.total,1191);
 const counts=Object.fromEntries(result.statuses);
 assert.equal(counts.Pendente,822);assert.equal(counts.Migrada,355);assert.equal(counts.Quebra,14);
 context.filterOwner='status';context.filterStatus='Quebra';
 assert.equal(context.reportVisibleActivities(mock).length,14,'filtro Quebradas engloba todos os motivos');
+context.filterStatus='Pendente';
+assert.equal(context.reportVisibleActivities(mock).length,836,'cartão Pendentes seleciona também as quebras');
 const historyCode=app.slice(app.indexOf('function activityHistoryEntries('),app.indexOf('function renderHome('));
 const historyContext={Date,Array,console,importedDateDay:()=>'',normStatus:context.normStatus};
 vm.createContext(historyContext);vm.runInContext(historyCode,historyContext);
