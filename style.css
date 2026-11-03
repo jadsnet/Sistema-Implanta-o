@@ -1968,7 +1968,8 @@ html[data-theme="light"] .ranking-line{border-top-color:rgba(68,30,99,.18)}
 .ranking-dialog{width:min(580px,100%);max-height:min(84vh,820px);overflow:auto;border-radius:17px;background:var(--panel,#27173c);color:var(--text);box-shadow:0 24px 80px rgba(10,0,26,.58);padding:20px 22px}
 .ranking-modal-header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:8px}
 .ranking-modal-header h2{margin:0;font-size:19px}
-.ranking-modal-close{font-size:25px;line-height:1;width:35px;height:35px;border-radius:10px;background:#7524b7;color:#fff;flex-shrink:0}
+.ranking-modal-close{display:grid!important;place-items:center!important;padding:0!important;width:40px;height:40px;min-width:40px;border-radius:10px;background:#7524b7;color:#fff;flex-shrink:0}
+.ranking-modal-close svg{display:block;margin:0;flex:none}
 .ranking-dialog .activity-ranking{background:transparent;box-shadow:none;margin:0;padding:2px 0 0}
 .ranking-dialog .ranking-title{justify-content:flex-start;margin-bottom:18px}
 .ranking-dialog .ranking-grid{grid-template-columns:minmax(90px,max-content) minmax(8px,1fr) 64px 65px 27px;column-gap:8px}

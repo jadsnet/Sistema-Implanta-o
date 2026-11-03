@@ -223,7 +223,7 @@ function openActivityRanking(){
  rankingOpen=true;
  const button=$('#toggleActivityRanking');button?.setAttribute('aria-expanded','true');button?.classList.add('active');
  const layer=document.createElement('div');layer.className='ranking-overlay';
- layer.innerHTML=`<div class="ranking-dialog" role="dialog" aria-modal="true" aria-labelledby="rankingDialogTitle"><header class="ranking-modal-header"><h2 id="rankingDialogTitle">Ranking dos analistas</h2><button type="button" class="ranking-modal-close" aria-label="Fechar ranking" title="Fechar">×</button></header><section id="activityRanking" class="activity-ranking" aria-label="Lista de analistas"></section></div>`;
+ layer.innerHTML=`<div class="ranking-dialog" role="dialog" aria-modal="true" aria-labelledby="rankingDialogTitle"><header class="ranking-modal-header"><h2 id="rankingDialogTitle">Ranking dos analistas</h2><button type="button" class="ranking-modal-close" aria-label="Fechar ranking" title="Fechar"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg></button></header><section id="activityRanking" class="activity-ranking" aria-label="Lista de analistas"></section></div>`;
  document.body.appendChild(layer);
  const close=()=>{layer.remove();rankingOpen=false;button?.setAttribute('aria-expanded','false');button?.classList.remove('active');button?.focus()};
  layer.querySelector('.ranking-modal-close').onclick=close;
@@ -232,9 +232,63 @@ function openActivityRanking(){
  renderActivityRanking();layer.querySelector('.ranking-modal-close').focus();
 }
 const funnelIcon='<svg class="date-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>';
-function recordActivityHistory(a,status,notes){if(!a||!['Migrada','Quebra','Abandonada'].includes(normStatus(status))&&status!=='Abandonada')return;const d=a.data;d.history=d.history||[];d.history.push({at:new Date().toISOString(),analyst:currentUser(),status:status||d.status||'Pendente',notes:String(notes||'')});save()}
+function recordActivityHistory(a,status,notes){
+ if(!a)return;
+ const value=String(notes||'').trim();
+ if(!value&&!['Migrada','Quebra'].includes(normStatus(status))&&status!=='Abandonada')return;
+ const d=a.data;d.history=d.history||[];
+ d.history.push({at:new Date().toISOString(),analyst:currentUser(),status:status||d.status||'Pendente',notes:value});save();
+}
+function activityHistoryEntries(a){
+ const d=a?.data||{};
+ const manual=(d.history||[]).filter(h=>String(h.notes||'').trim()||['Migrada','Quebra'].includes(normStatus(h.status))||h.status==='Abandonada');
+ const imported=Array.isArray(d.importHistoryEvents)?d.importHistoryEvents:[];
+ const items=[...manual,...imported];
+ const legacyNotes=String(d.observations||'').trim();
+ if(legacyNotes&&!items.some(h=>String(h.notes||'').includes(legacyNotes)))items.push({
+  id:'legacy-observation',status:d.status||'Observação',analyst:d.analystName||'',
+  at:d.endAt||d.row?.['DATA SDWAN']||d.updatedAt||d.createdAt||'',notes:legacyNotes,source:'registro anterior'
+ });
+ const timestamp=h=>{const at=String(h.at||'');const date=/^\d{4}-\d{2}-\d{2}$/.test(at)?new Date(at+'T12:00:00'):new Date(at);return Number.isNaN(date.getTime())?0:date.getTime()};
+ return items.sort((a,b)=>timestamp(b)-timestamp(a));
+}
+function preserveLegacyObservation(a){
+ const d=a?.data;if(!d)return;
+ const notes=String(d.observations||'').trim();if(!notes)return;
+ if([...(d.history||[]),...(d.importHistoryEvents||[])].some(h=>String(h.notes||'').includes(notes)))return;
+ d.history=d.history||[];
+ d.history.push({at:d.endAt||d.row?.['DATA SDWAN']||d.updatedAt||new Date().toISOString(),
+  analyst:d.analystName||'',status:d.status||'Observação',notes});
+}
+function historyReadableDate(value){
+ const at=String(value||'');if(!at)return 'Data não informada';
+ const day=importedDateDay(at);
+ const date=day&&day===at?new Date(day+'T12:00:00'):day&&!/^\d{4}-\d{2}-\d{2}[T ]/.test(at)?new Date(day+'T12:00:00'):new Date(at);
+ return Number.isNaN(date.getTime())?'Data não informada':date.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
 function renderHome(){let c=$('#appContent');if(!project()){c.innerHTML=`<div class="panel project-selection-panel"><h3>Selecione um projeto</h3><div class="grid project-selection-grid">${arr('projects').map(p=>`<div class="project" data-project="${esc(p.id)}"><div class="letter">${p.data?.profilePhoto?`<img src="${esc(p.data.profilePhoto)}" alt="Foto de ${esc(getName(p))}">`:esc(getName(p).slice(0,1))}</div><div class="project-selection-info"><b>${esc(getName(p))}</b><div class="sub small">${arr('activities').filter(a=>String((a.data.row||{}).EMPRESA||'').toLowerCase()===getName(p).toLowerCase()).length} atividades</div></div></div>`).join('')}</div></div>`;c.querySelectorAll('[data-project]').forEach(el=>el.onclick=()=>{projectId=el.dataset.project;selectedActivity=null;render()});return}if(selectedActivity){c.innerHTML=activityDetail(selectedActivity,detailMode);wireDetail();return}let acts=dateActivities(projectActivities());let counts=Object.fromEntries(statuses.map(s=>[s,acts.filter(a=>normStatus(a.data.status)===s).length]));c.innerHTML=`<div class="home-filters"><div class="date-buttons"><button class="${dateFilter==='today'?'active':''}" data-datefilter="today">Hoje</button><button class="${dateFilter==='other'?'active':''}" data-datefilter="other">Outro dia</button><button class="${dateFilter==='all'?'active':''}" data-datefilter="all">Total geral</button>${dateFilter==='other'?funnelIcon:''}<input type="date" id="otherDate" value="${esc(selectedDate)}" class="${dateFilter==='other'?'':'hidden'}" aria-label="Escolher data"></div></div><div class="stats">${statuses.map(s=>`<button type="button" class="stat stat-clickable ${filterOwner==='status'&&filterStatus===s?'selected':''}" data-statusfilter="${esc(s)}" aria-pressed="${filterOwner==='status'&&filterStatus===s}">${filterOwner==='status'&&filterStatus===s?`<svg class="stat-filter-watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>`:""}<div class="stat-emoji">${({'Pendente':'⏳','Em andamento':'📋','Migrada':'✅','Quebra':'⚠️'})[s] ? (()=>{const ic=({'Pendente':'⏳','Em andamento':'📋','Migrada':'✅','Quebra':'⚠️'})[s];return `<span class="e s" aria-hidden="true">${ic}</span><span class="e h" aria-hidden="true">${ic}</span><span class="fc" aria-hidden="true"><span class="e f">${ic}</span></span><span class="e d" aria-hidden="true">${ic}</span><span class="gl" aria-hidden="true"></span>`})() : ''}</div><span>${s==='Migrada'?'Migradas':s==='Pendente'?'Pendentes (projeto)':s==='Quebra'?'Quebradas':s}</span><b>${counts[s]}</b></button>`).join('')}<section class="custom-filter-card ${filterOwner==='custom' ? 'selected' : ''}"><h3>🔎 Filtragem customizada ${filterOwner==='custom'?`<svg class="custom-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>`:""}</h3><div class="custom-filter-fields"><label>Analista<input id="customAnalyst" list="customAnalystNames" placeholder="Todos os analistas" value="${esc(customAnalyst)}"><datalist id="customAnalystNames">${[...new Set(projectActivities().map(a=>canonicalAnalystName(a.data.analystName)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')).map(n=>`<option value="${esc(n)}"></option>`).join('')}</datalist></label><label>Status<select id="customStatus">${[['Todos','Todos os status'],['Pendente','Pendente'],['Em andamento','Em andamento'],['Contatando técnico','Contatando técnico'],['Iniciando configuração','Iniciando configuração'],['Finalizando configuração','Finalizando configuração'],['Aguardando cliente config Fortinet','Aguardando cliente config Fortinet'],['Organização de Rack e equipamentos','Organização de Rack e equipamentos'],['Migrada','Migradas'],['Quebra','Quebradas'],...breakStatuses.map(s=>[s,s])].map(([v,t])=>`<option value="${esc(v)}" ${customStatus===v?'selected':''}>${t}</option>`).join('')}</select></label><button id="clearCustomFilter" class="secondary" type="button">Limpar</button></div><div class="small muted" id="customFilterCount"></div></section></div><div class="substats"><span>Contatando técnico: <b>${acts.filter(a=>a.data.status==='Contatando técnico').length}</b></span><span>Iniciando configuração: <b>${acts.filter(a=>a.data.status==='Iniciando configuração').length}</b></span><span>Finalizando configuração: <b>${acts.filter(a=>a.data.status==='Finalizando configuração').length}</b></span></div><section class="search-section"><div class="report-search-heading"><h3>Buscar atividade</h3><div class="report-heading-actions"><button type="button" class="report-trigger ranking-trigger ${rankingOpen?'active':''}" id="toggleActivityRanking" aria-controls="activityRanking" aria-expanded="${rankingOpen}" title="Mostrar ranking de analistas"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Z"/><path d="M8 5H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4M12 13v4m-4 4h8m-4-4v4"/></svg><span>Ranking</span></button><button type="button" class="report-trigger" id="openActivityReport" title="Escolher colunas e exportar relatório"><svg class="report-sheet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.5h10l4 4V21H5z"/><path d="M15 2.5V7h4M8 11h8M8 15h8M11 9v10"/></svg><span>Extrair relatório</span></button></div></div><input id="searchActivity" value="${esc(localStorage.getItem('gi_search_'+(projectId||''))||'')}" placeholder="Buscar por ID, ID do link ou ID do VGR" style="width:100%;margin-bottom:12px"><div class="small muted" id="activityHint" aria-live="polite">Minhas atividades em andamento:</div><div id="activityList"></div></section>`;c.querySelectorAll('[data-datefilter]').forEach(b=>b.onclick=()=>{dateFilter=b.dataset.datefilter;filterOwner='none';filterStatus='Todos';customAnalyst='';customStatus='Todos';localStorage.removeItem('gi_search_'+(projectId||''));render()});$('#otherDate').onchange=e=>{selectedDate=e.target.value||new Date().toISOString().slice(0,10);dateFilter='other';filterOwner='none';filterStatus='Todos';customAnalyst='';customStatus='Todos';localStorage.removeItem('gi_search_'+(projectId||''));render()};c.querySelectorAll('[data-statusfilter]').forEach(b=>b.onclick=()=>{filterStatus=filterOwner==='status'&&filterStatus===b.dataset.statusfilter?'Todos':b.dataset.statusfilter;filterOwner=filterStatus==='Todos'?'none':'status';customAnalyst='';customStatus='Todos';localStorage.removeItem('gi_search_'+(projectId||''));render()});$('#customAnalyst').oninput=()=>{customAnalyst=$('#customAnalyst').value.trim();applyCustomFilterSelection()};$('#customStatus').onchange=()=>{customStatus=$('#customStatus').value;applyCustomFilterSelection()};$('#clearCustomFilter').onclick=()=>{customAnalyst='';customStatus='Todos';$('#customAnalyst').value='';$('#customStatus').value='Todos';filterOwner='none';updateFilterIndicators();renderActivityList()};$('#openActivityReport').onclick=openActivityReport;$('#toggleActivityRanking').onclick=openActivityRanking;$('#searchActivity').oninput=()=>{localStorage.setItem('gi_search_'+(projectId||''),$('#searchActivity').value);renderActivityList()};renderActivityList()}function elapsed(start){if(!start)return '';let sec=Math.max(0,Math.floor((Date.now()-new Date(start).getTime())/1000));if(!Number.isFinite(sec))return '';let h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),ss=sec%60;const time=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;return h>=24?`${new Date(start).toLocaleDateString('pt-BR')} · ${time}`:time}
-function adoptActivity(id){let a=arr('activities').find(x=>x.id===id);if(!a)return;let d=a.data;if(d.analystName&&!GICloud.userOwnsActivity(a)){toast('Atividade já atribuída a '+firstName(d.analystName));return}d.analystName=currentUser();d.analystId=currentUser();d.status='Contatando técnico';d.startAt=d.startAt||new Date().toISOString();d.endAt=null;recordActivityHistory(a,d.status,'Atividade adotada');log('Atividade adotada',activityName(a),a.id);save();toast('Atividade adotada por '+firstName(currentUser()));selectedActivity=id;detailMode='view';render()}
+async function adoptActivity(id){
+ const a=arr('activities').find(x=>x.id===id);if(!a)return;
+ const broken=normStatus(a.data.status)==='Quebra';
+ if(a.data.analystName&&!broken&&!GICloud.userOwnsActivity(a))return toast('Atividade já atribuída a '+firstName(a.data.analystName));
+ if(!GICloud.role())return toast('Entre com um usuário autorizado para adotar atividades');
+ const backup=JSON.parse(JSON.stringify(a.data)),d=a.data;
+ d.analystName=currentUser();d.analystId=currentUser();d.status='Contatando técnico';
+ d.startAt=broken||!d.startAt?new Date().toISOString():d.startAt;d.endAt=null;
+ try{
+  save();await GICloud.waitForSaves();
+  DB=await GICloud.loadAll();
+  const saved=arr('activities').find(x=>x.id===id);
+  if(!saved||!GICloud.userOwnsActivity(saved))throw Error('O servidor não confirmou a transferência desta atividade');
+  const oldNotes=String(backup.observations||'').trim();
+  if(oldNotes&&![...(saved.data.history||[]),...(saved.data.importHistoryEvents||[])].some(h=>String(h.notes||'').includes(oldNotes))){
+   saved.data.history=saved.data.history||[];
+   saved.data.history.push({at:backup.endAt||backup.row?.['DATA SDWAN']||new Date().toISOString(),analyst:backup.analystName||'',status:backup.status,notes:oldNotes});
+   save();await GICloud.waitForSaves();
+  }
+  toast('Atividade adotada por '+firstName(currentUser()));selectedActivity=id;detailMode='view';render();
+ }catch(err){a.data=backup;toast('Não foi possível adotar: '+err.message,8000)}
+}
 function abandonActivity(id){
  const a=arr('activities').find(x=>x.id===id);
  if(!a||!GICloud.userOwnsActivity(a))return;
@@ -248,6 +302,7 @@ function abandonActivity(id){
  overlay.querySelector('#cancelAbandon').onclick=()=>overlay.remove();
  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove()});
  overlay.querySelector('#confirmAbandon').onclick=()=>{
+  preserveLegacyObservation(a);
   a.data.observations=overlay.querySelector('#abandonNotes').value;
   a.data.abandonNotes=a.data.observations;
   recordActivityHistory(a,'Abandonada',a.data.abandonNotes);a.data.status='Pendente';a.data.analystName=null;a.data.analystId=null;a.data.startAt=null;a.data.endAt=null;
@@ -282,7 +337,15 @@ async function copyActivityStamp(a,type){
  save();toast('Carimbo '+(type==='sae'?'SAE':'Meraki')+' copiado!');
  }catch(e){const modal=document.createElement('div');modal.className='activity-modal-overlay';modal.innerHTML='<div class="activity-modal"><h3>Carimbo gerado</h3><p>Selecione o texto e copie com Ctrl+C.</p><textarea id="stampFallback" rows="14" readonly></textarea><div class="stamp-actions"><button id="stampClose">Fechar</button></div></div>';document.body.appendChild(modal);modal.querySelector('#stampFallback').value=txt;modal.querySelector('#stampFallback').select();modal.querySelector('#stampClose').onclick=()=>modal.remove()}
 }
-function updateFilterIndicators(){document.querySelectorAll('[data-statusfilter]').forEach(b=>{let active=filterOwner==='status'&&filterStatus===b.dataset.statusfilter;b.classList.toggle('selected',active);b.setAttribute('aria-pressed',String(active));let icon=b.querySelector('.stat-filter-watermark');if(icon)icon.remove();if(active)b.insertAdjacentHTML('afterbegin',`<svg class="stat-filter-watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>`)});{const card=document.querySelector('.custom-filter-card');if(card){const active=filterOwner==='custom';card.classList.toggle('selected',active);card.querySelector('.custom-filter-icon')?.remove();if(active)card.querySelector('h3')?.insertAdjacentHTML('beforeend',`<svg class="custom-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>`);}}}function renderActivityList(){let input=$('#searchActivity');if(!input)return;let q=input.value.trim().toLowerCase();localStorage.setItem('gi_search_'+(projectId||''),input.value);let list=$('#activityList');let projectActs=projectActivities(),all=dateActivities(projectActs);let mine=projectActs.filter(a=>GICloud.userOwnsActivity(a)&&!a.data.endAt&&!['Migrada','Quebra'].includes(normStatus(a.data.status)));let found=q?projectActs.filter(a=>{let r=a.data.row||{};return Object.values(r).some(v=>String(v||'').toLowerCase().includes(q))||activityName(a).toLowerCase().includes(q)}):[];let customOn=filterOwner==='custom'&&(!!customAnalyst||customStatus!=='Todos');let acts=q?found:(customOn?projectActs:(filterOwner==='status'&&filterStatus!=='Todos'?all.filter(a=>normStatus(a.data.status)===filterStatus):dateFilter==='all'?all:all.filter(a=>normStatus(a.data.status)!=='Pendente')));if(customOn&&!q){acts=acts.filter(a=>(!customAnalyst||canonicalAnalystName(a.data.analystName).toLocaleLowerCase('pt-BR').includes(canonicalAnalystName(customAnalyst).toLocaleLowerCase('pt-BR')))&&(customStatus==='Todos'||(customStatus==='Em andamento'?normStatus(a.data.status)==='Em andamento':customStatus===a.data.status||normStatus(a.data.status)===customStatus)));}acts=newestActivities(acts);$('#customFilterCount').textContent=customOn?`${acts.length} atividade(s) encontrada(s) na filtragem customizada.`:'';$('#activityHint').textContent=q?'Resultados da busca (todas as datas e status):':customOn?`Resultados da filtragem customizada: ${acts.length} atividade(s)`:(filterOwner==='status'&&filterStatus!=='Todos'?'Atividades filtradas por status:':dateFilter==='all'?'Todas as atividades do projeto (mais recentes primeiro):':'Atividades da data selecionada:');list.innerHTML=acts.slice(0,homeListLimit).map(a=>{let r=a.data.row||{},d=a.data,st=d.status||'Pendente',adopted=!!d.analystName;return `<div class="activity-line" data-view="${esc(a.id)}" tabindex="0" role="button"><div class="activity-main"><b>${esc(activityName(a))}</b><div class="small muted">${esc(r['ENDEREÇO COMPLETO']||r.HOSTNAME||r.EMPRESA||'Atividade')}</div></div><div class="activity-meta"><span class="activity-completion-date">${esc(completionLabel(a))}</span>${adopted?`${runningActivityTime(a)?`<span class="elapsed" data-start="${esc(d.startAt)}">◴ ${runningActivityTime(a)}</span>`:'<span class="elapsed"></span>'}<span class="owner" title="${esc(canonicalAnalystName(d.analystName))}">${esc(analystListName(d.analystName))}</span>`:`<span class="elapsed"></span><span class="owner" title="${esc(d.analystName||'')}">${esc(d.analystName||'')}</span>`}</div><span class="status ${esc(normStatus(st))}">${esc(st)}</span>${adopted&&!GICloud.userOwnsActivity(a)?'<button class="secondary" disabled>Adotada</button>':`<button data-adopt="${esc(a.id)}">${adopted?'Abrir atividade':'Adotar'}</button>`}</div>`}).join('')+(acts.length>homeListLimit?`<div class="activity-show-more"><span>${homeListLimit} de ${acts.length} atividades</span><button type="button" id="loadMoreActivities" class="secondary">Mostrar mais atividades</button></div>`:'')||'<div class="empty">Nenhuma atividade encontrada.</div>';list.querySelector('#loadMoreActivities')?.addEventListener('click',()=>{homeListLimit+=200;renderActivityList()});list.querySelectorAll('[data-view]').forEach(el=>{el.onclick=e=>{if(e.target.closest('button'))return;selectedActivity=el.dataset.view;detailMode='view';render()};el.onkeydown=e=>{if(e.key==='Enter'){selectedActivity=el.dataset.view;detailMode='view';render()}}});list.querySelectorAll('[data-adopt]').forEach(b=>b.onclick=e=>{e.stopPropagation();let a=arr('activities').find(x=>x.id===b.dataset.adopt);if(a&&GICloud.userOwnsActivity(a)){selectedActivity=a.id;detailMode='view';render()}else adoptActivity(b.dataset.adopt)})}
+function updateFilterIndicators(){document.querySelectorAll('[data-statusfilter]').forEach(b=>{let active=filterOwner==='status'&&filterStatus===b.dataset.statusfilter;b.classList.toggle('selected',active);b.setAttribute('aria-pressed',String(active));let icon=b.querySelector('.stat-filter-watermark');if(icon)icon.remove();if(active)b.insertAdjacentHTML('afterbegin',`<svg class="stat-filter-watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>`)});{const card=document.querySelector('.custom-filter-card');if(card){const active=filterOwner==='custom';card.classList.toggle('selected',active);card.querySelector('.custom-filter-icon')?.remove();if(active)card.querySelector('h3')?.insertAdjacentHTML('beforeend',`<svg class="custom-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5z"/></svg>`);}}}function renderActivityList(){let input=$('#searchActivity');if(!input)return;let q=input.value.trim().toLowerCase();localStorage.setItem('gi_search_'+(projectId||''),input.value);let list=$('#activityList');let projectActs=projectActivities();let customOn=filterOwner==='custom'&&(!!customAnalyst||customStatus!=='Todos');let acts=filteredHomeActivities(projectActs,q);$('#customFilterCount').textContent=customOn?`${acts.length} atividade(s) encontrada(s) na filtragem customizada.`:'';$('#activityHint').textContent=q?'Resultados da busca (todas as datas e status):':customOn?`Resultados da filtragem customizada: ${acts.length} atividade(s)`:(filterOwner==='status'&&filterStatus!=='Todos'?'Atividades filtradas por status:':dateFilter==='all'?'Todas as atividades do projeto (mais recentes primeiro):':'Atividades da data selecionada:');list.innerHTML=acts.slice(0,homeListLimit).map(a=>{let r=a.data.row||{},d=a.data,st=d.status||'Pendente',adopted=!!d.analystName;return `<div class="activity-line" data-view="${esc(a.id)}" tabindex="0" role="button"><div class="activity-main"><b>${esc(activityName(a))}</b><div class="small muted">${esc(r['ENDEREÇO COMPLETO']||r.HOSTNAME||r.EMPRESA||'Atividade')}</div></div><div class="activity-meta"><span class="activity-completion-date">${esc(completionLabel(a))}</span>${adopted?`${runningActivityTime(a)?`<span class="elapsed" data-start="${esc(d.startAt)}">◴ ${runningActivityTime(a)}</span>`:'<span class="elapsed"></span>'}<span class="owner" title="${esc(canonicalAnalystName(d.analystName))}">${esc(analystListName(d.analystName))}</span>`:`<span class="elapsed"></span><span class="owner" title="${esc(d.analystName||'')}">${esc(d.analystName||'')}</span>`}</div><span class="status ${esc(normStatus(st))}">${esc(st)}</span>${adopted&&!GICloud.userOwnsActivity(a)&&normStatus(st)!=='Quebra'?'<button class="secondary" disabled>Adotada</button>':`<button data-adopt="${esc(a.id)}">${adopted&&normStatus(st)!=='Quebra'?'Abrir atividade':'Adotar'}</button>`}</div>`}).join('')+(acts.length>homeListLimit?`<div class="activity-show-more"><span>${homeListLimit} de ${acts.length} atividades</span><button type="button" id="loadMoreActivities" class="secondary">Mostrar mais atividades</button></div>`:'')||'<div class="empty">Nenhuma atividade encontrada.</div>';list.querySelector('#loadMoreActivities')?.addEventListener('click',()=>{homeListLimit+=200;renderActivityList()});list.querySelectorAll('[data-view]').forEach(el=>{el.onclick=e=>{if(e.target.closest('button'))return;selectedActivity=el.dataset.view;detailMode='view';render()};el.onkeydown=e=>{if(e.key==='Enter'){selectedActivity=el.dataset.view;detailMode='view';render()}}});list.querySelectorAll('[data-adopt]').forEach(b=>b.onclick=e=>{e.stopPropagation();let a=arr('activities').find(x=>x.id===b.dataset.adopt);if(a&&GICloud.userOwnsActivity(a)&&normStatus(a.data.status)!=='Quebra'){selectedActivity=a.id;detailMode='view';render()}else adoptActivity(b.dataset.adopt)})}
+function filteredHomeActivities(projectActs,search=''){
+ const q=String(search||'').trim().toLocaleLowerCase('pt-BR'),all=dateActivities(projectActs);
+ const customOn=filterOwner==='custom'&&(!!customAnalyst||customStatus!=='Todos');
+ const found=q?projectActs.filter(a=>{const r=a.data.row||{};return Object.values(r).some(v=>String(v??'').toLocaleLowerCase('pt-BR').includes(q))||String(activityName(a)).toLocaleLowerCase('pt-BR').includes(q)}):[];
+ let acts=q?found:(customOn?projectActs:(filterOwner==='status'&&filterStatus!=='Todos'?all.filter(a=>normStatus(a.data.status)===filterStatus):dateFilter==='all'?all:all.filter(a=>normStatus(a.data.status)!=='Pendente')));
+ if(customOn&&!q)acts=acts.filter(a=>(!customAnalyst||canonicalAnalystName(a.data.analystName).toLocaleLowerCase('pt-BR').includes(canonicalAnalystName(customAnalyst).toLocaleLowerCase('pt-BR')))&&(customStatus==='Todos'||(customStatus==='Em andamento'?normStatus(a.data.status)==='Em andamento':customStatus===a.data.status||normStatus(a.data.status)===customStatus)));
+ return newestActivities(acts);
+}
 function calculateMxIp(value){
  const match=String(value||'').trim().match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/(31|30)$/);
  if(!match)return '';
@@ -317,10 +380,10 @@ function activityDetail(id,mode='view',adminMode=false){
  return `<div class="activity-detail-screen"><div class="detailhead detail-toolbar"><button class="secondary" id="closeDetail">← ${adminMode?'Voltar à lista':'Voltar à busca'}</button><div class="admin-detail-toolbar-right"><span class="status ${esc(normStatus(d.status))}">${esc(d.status||'Pendente')}</span>${adminMode?`<button type="button" class="danger-project admin-delete-activity" id="adminDeleteActivity">Excluir atividade</button>`:''}</div></div>
  <section class="activity-summary"><div class="eyebrow">ID VGR</div><h2>${esc(activityName(a))}</h2><p class="muted">Analista: ${esc(canonicalAnalystName(d.analystName)||'—')}${normStatus(d.status)==='Em andamento'?` · Data: ${esc(d.startAt?new Date(d.startAt).toLocaleDateString('pt-BR'):'—')} · Início: ${esc(d.startAt?new Date(d.startAt).toLocaleTimeString('pt-BR'):'—')} · Tempo: ${esc(runningActivityTime(a)||'—')}`:completionLabel(a)?` · ${esc(completionLabel(a))}`:''}</p>
  <div class="activity-summary-layout"><div class="activity-summary-controls"><div class="field"><label>Status da atividade</label><select id="activityStatus" ${canEdit?'':'disabled'}>${activityStatusOptions.map(st=>`<option ${d.status===st?'selected':''} ${st==='Pendente'?'disabled':''}>${st}</option>`).join('')}</select></div>
- <div class="field activity-observations ${finalStatus?'':'hidden'}" id="activityObservationsWrap"><label for="activityObservations">Observações da atividade</label><textarea id="activityObservations" rows="3" placeholder="Registre observações, detalhes da migração ou motivo da quebra..." ${canEdit?'':'readonly'}>${esc(d.observations||'')}</textarea><span class="small muted">Campo para textos longos. Salvamento automático.</span></div>
- <div class="filters">${adminMode?'':(!d.analystName?`<button id="adoptActivity">Adotar atividade</button>`:canEdit&&!d.endAt?`<button class="danger" id="abandonActivity">Abandonar atividade</button>`:"")}</div></div>
- <div class="activity-history"><h3>Histórico</h3><div class="activity-history-list">${(d.history||[]).map((h,i)=>({...h,originalIndex:i})).filter(h=>['Migrada','Quebra'].includes(normStatus(h.status))||h.status==='Abandonada').map(h=>`<button type="button" class="history-link" data-history="${h.originalIndex}">${esc(new Date(h.at).toLocaleString('pt-BR'))} · ${esc(h.analyst||'—')} · ${esc(h.status||'—')}</button>`).join('')||'<span class="small muted">Nenhuma conclusão registrada nesta atividade.</span>'}</div></div>
- ${canEdit&&!adminMode?`<div class="stamp-panel"><div class="stamp-panel-heading"><span>Carimbos</span></div><div class="stamp-actions"><button class="stamp-logo-btn" id="generateSaeStamp" title="Gerar carimbo SAE" aria-label="Gerar carimbo SAE"><img src="sae-button.png" alt="SAE"></button><button class="stamp-logo-btn" id="generateMerakiStamp" title="Gerar carimbo Meraki" aria-label="Gerar carimbo Meraki"><img src="meraki-button.png" alt="Cisco Meraki"></button></div></div>`:adminMode?'':'<p class="small muted">Somente o analista responsável pode editar esta atividade.</p>'}</div>
+ <div class="field activity-observations ${canEdit?'':'hidden'}" id="activityObservationsWrap"><label for="activityObservations">Registrar nova observação</label><textarea id="activityObservations" rows="3" placeholder="Digite uma nova observação para adicioná-la ao histórico..."></textarea><button type="button" class="secondary" id="saveNewObservation">Registrar no histórico</button></div>
+ <div class="filters">${adminMode?'':(normStatus(d.status)==='Quebra'||!d.analystName?`<button id="adoptActivity">Adotar atividade</button>`:canEdit&&!d.endAt?`<button class="danger" id="abandonActivity">Abandonar atividade</button>`:"")}</div></div>
+ <div class="activity-history"><h3>Histórico</h3><div class="activity-history-list">${activityHistoryEntries(a).map((h,i)=>`<button type="button" class="history-link" data-history="${i}">${esc(historyReadableDate(h.at))} · ${esc(h.analyst||'Analista não identificado')} · ${esc(h.status||'Observação')}</button>`).join('')||'<span class="small muted">Nenhum histórico registrado nesta atividade.</span>'}</div></div>
+ ${canEdit&&!adminMode?`<div class="stamp-panel"><div class="stamp-panel-heading"><span>Carimbos</span></div><div class="stamp-actions"><button class="stamp-logo-btn" id="generateSaeStamp" title="Gerar carimbo SAE" aria-label="Gerar carimbo SAE"><img src="sae-button.png" alt="SAE"></button><button class="stamp-logo-btn" id="generateMerakiStamp" title="Gerar carimbo Meraki" aria-label="Gerar carimbo Meraki"><img src="meraki-button.png" alt="Cisco Meraki"></button></div></div>`:adminMode?'':`<p class="small muted">${normStatus(d.status)==='Quebra'?'Adote a atividade quebrada para registrar novas informações.':'Somente o analista responsável pode editar esta atividade.'}</p>`}</div>
 
  <p class="small muted">${adminMode?'Alterações administrativas são salvas automaticamente e registradas no log.':'Alterações são salvas automaticamente neste navegador. Os carimbos são copiados para a área de transferência.'}</p></section>
  ${visibleGroups.map(g=>`<section class="info-section"><h3 class="floating-title">${esc(g[0])}</h3><div class="info-grid">${g[0]==='Localização / Unidade'||g[0]==='Outras informações'?`<div class="location-main-fields">${g[1].filter(k=>!contactFields.includes(k)).map(field).join('')}</div><div class="location-contact-fields">${contactFields.filter(k=>g[1].includes(k)).map(field).join('')}</div>`:g[1].map(field).join('')}</div></section>`).join('')}</div>`;
@@ -335,23 +398,26 @@ function wireDetail(){
   if(!GICloud.userOwnsActivity(a))return;
   if(!a.data.ed)a.data.ed={};
   document.querySelectorAll('[data-edit]').forEach(el=>a.data.ed[el.dataset.edit]=el.value);
-  const notes=$('#activityObservations');if(notes){a.data.observations=notes.value;const history=a.data.history||[];const last=history[history.length-1];if(last&&['Migrada','Quebra'].includes(normStatus(last.status))&&last.status===a.data.status&&last.analyst===currentUser())last.notes=notes.value;}
   save();
  };
  document.querySelectorAll('[data-edit]').forEach(el=>{
   if(el.dataset.edit==='IP LINK')el.addEventListener('input',()=>{el.value=el.value.replace(/[^0-9./]/g,'')});
   el.addEventListener('change',persist);
  });
- $('#activityObservations')?.addEventListener('input',persist);
+ $('#saveNewObservation')?.addEventListener('click',()=>{
+  if(!GICloud.userOwnsActivity(a))return;
+  const notes=$('#activityObservations')?.value.trim();if(!notes)return toast('Digite uma observação para registrar');
+  preserveLegacyObservation(a);a.data.observations=notes;recordActivityHistory(a,a.data.status,notes);toast('Observação adicionada ao histórico');render();
+ });
  $('#activityStatus')?.addEventListener('change',()=>{
   if(!GICloud.userOwnsActivity(a))return;
-  persist();const next=$('#activityStatus').value,prev=a.data.status;
+  persist();preserveLegacyObservation(a);const next=$('#activityStatus').value,prev=a.data.status;
   a.data.status=next;
   if(['Migrada','Quebra'].includes(normStatus(next))&&!a.data.endAt)a.data.endAt=new Date().toISOString();
   if(!['Migrada','Quebra'].includes(normStatus(next))&&['Migrada','Quebra'].includes(normStatus(prev)))a.data.endAt=null;
-  recordActivityHistory(a,next,a.data.observations||'');save();log('Status atualizado',next,a.id);toast('Status salvo automaticamente');render();
+  recordActivityHistory(a,next,'');save();log('Status atualizado',next,a.id);toast('Status salvo automaticamente');render();
  });
- document.querySelectorAll('[data-history]').forEach(btn=>btn.addEventListener('click',()=>{const h=(a.data.history||[])[Number(btn.dataset.history)];if(!h)return;const overlay=document.createElement('div');overlay.className='history-overlay';overlay.innerHTML=`<div class="history-dialog" role="dialog" aria-modal="true"><h2>Histórico da atividade</h2><p>${esc(new Date(h.at).toLocaleString('pt-BR'))} · ${esc(h.analyst)} · ${esc(h.status)}</p><label>Observações registradas</label><div class="history-notes">${esc(h.notes||'Nenhuma observação registrada nesta movimentação.')}</div><button type="button" class="secondary" id="closeHistory">Fechar</button></div>`;document.body.appendChild(overlay);overlay.querySelector('#closeHistory').onclick=()=>overlay.remove();overlay.onclick=e=>{if(e.target===overlay)overlay.remove()}}));
+ document.querySelectorAll('[data-history]').forEach(btn=>btn.addEventListener('click',()=>{const h=activityHistoryEntries(a)[Number(btn.dataset.history)];if(!h)return;const overlay=document.createElement('div');overlay.className='history-overlay';overlay.innerHTML=`<div class="history-dialog" role="dialog" aria-modal="true"><h2>Histórico da atividade</h2><p>${esc(historyReadableDate(h.at))} · ${esc(h.analyst||'Analista não identificado')} · ${esc(h.status||'Observação')}</p><label>Observações registradas</label><div class="history-notes">${esc(h.notes||'Nenhuma observação registrada nesta movimentação.')}</div><button type="button" class="secondary" id="closeHistory">Fechar</button></div>`;document.body.appendChild(overlay);overlay.querySelector('#closeHistory').onclick=()=>overlay.remove();overlay.onclick=e=>{if(e.target===overlay)overlay.remove()}}));
  $('#generateSaeStamp')?.addEventListener('click',()=>copyActivityStamp(a,'sae'));
  $('#generateMerakiStamp')?.addEventListener('click',()=>copyActivityStamp(a,'meraki'));
 }
@@ -495,13 +561,22 @@ function prepareActivitySpreadsheet(data,p,mode){
   const statusKey=Object.keys(group[0].row).find(h=>['statussdwan','status','statusdaatividade'].includes(importColumnKey(h)));
   const analystKey=Object.keys(group[0].row).find(h=>['analista','analistatecnico','analistadaatividade','nomedoanalista','nomedoanalistadaatividade','responsavelpelaatividade','analistaresponsavel'].includes(importColumnKey(h)));
   const events=new Map();
+  const historyEvents=new Map();
   for(const item of group){
-   const status=importedStatus(item.row[statusKey]);if(normStatus(status)!=='Quebra')continue;
+   const rawStatus=String(item.row[statusKey]??'').trim(),status=importedStatus(rawStatus);
    const analyst=usableAnalystName(item.row[analystKey]);const day=importedMovementDate(item.row);
-   const eventKey=[day||`linha-${item.index}`,status,analyst].join('|');
-   if(!events.has(eventKey))events.set(eventKey,{id:eventKey,status,analyst,at:day||'',source:'planilha'});
+   const observations=Object.entries(item.row).filter(([header,value])=>
+    ['observacao','observacoes','observacoesdaatividade','obsnoc'].includes(importColumnKey(header))&&String(value??'').trim());
+   const notes=observations.map(([header,value])=>observations.length>1?`${header}: ${String(value).trim()}`:String(value).trim()).join('\n');
+   const movementId=[day||`linha-${item.index}`,status||rawStatus,analyst].join('|');
+   if(normStatus(status)==='Quebra'&&!events.has(movementId))events.set(movementId,{id:movementId,status,analyst,at:day||'',source:'planilha'});
+   if(notes||status&&['Migrada','Quebra'].includes(normStatus(status))){
+    const id=[movementId,notes].join('|');
+    if(!historyEvents.has(id))historyEvents.set(id,{id,status:status||rawStatus||'Observação',analyst,at:day||'',notes,source:'planilha'});
+   }
   }
   row.__importBreakEvents=[...events.values()];
+  row.__importHistoryEvents=[...historyEvents.values()];
   for(const item of group)for(const [header,value] of Object.entries(item.row))if(String(value??'').trim()){
    row[header]=value;
    const field=importColumnKey(header);
@@ -557,7 +632,14 @@ function mergeImportedActivityFields(a,row,p,idHeader){
   const all=[...combined.values()];
   if(JSON.stringify(data.importBreakEvents||[])!==JSON.stringify(all))assign(data,'importBreakEvents',all);
  }
+ if(Array.isArray(row.__importHistoryEvents)){
+  const combined=new Map((data.importHistoryEvents||[]).filter(e=>e&&e.id).map(e=>[e.id,e]));
+  for(const event of row.__importHistoryEvents)combined.set(event.id,event);
+  const all=[...combined.values()];
+  if(JSON.stringify(data.importHistoryEvents||[])!==JSON.stringify(all))assign(data,'importHistoryEvents',all);
+ }
  for(const [header,raw] of Object.entries(row)){
+  if(header.startsWith('__import'))continue;
   if(header.startsWith('__import'))continue;
   const value=String(raw??'').trim();if(!value||header===idHeader)continue; // vazios não apagam dados atuais
   const normalized=importColumnKey(header);
@@ -594,7 +676,7 @@ function commitNewActivitySpreadsheet(p,data,prepared){
  const batch='batch_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),created=[];
  const templateBefore=[...(p.data.activityTemplate||[])];
  for(const {row} of prepared.entries){
-  const fields={};for(const [header,value] of Object.entries(row))fields[header]=header==='__importBreakEvents'?value:String(value??'').trim();
+  const fields={};for(const [header,value] of Object.entries(row))fields[header]=header.startsWith('__import')?value:String(value??'').trim();
   fields['ID VGR']=String(row[prepared.idHeader]).trim();
   const activity={id:'imp_'+Date.now()+'_'+created.length+'_'+Math.random().toString(36).slice(2,7),data:{projectId:p.id,row:{'ID VGR':fields['ID VGR']},status:'Pendente',analystName:null,analystId:null,startAt:null,endAt:null,importBatch:batch,createdAt:new Date().toISOString()}};
   mergeImportedActivityFields(activity,fields,p,prepared.idHeader);
@@ -743,29 +825,31 @@ function openAdminActivityEditor(){
    if(!inProject()||!projectActivities().some(x=>x.id===a.id))return;
    a.data.ed=a.data.ed||{};
    body.querySelectorAll('[data-edit]').forEach(el=>a.data.ed[el.dataset.edit]=el.value);
-   const notes=$modal('#activityObservations');
-   if(notes){a.data.observations=notes.value;const last=(a.data.history||[]).at(-1);if(last&&['Migrada','Quebra'].includes(normStatus(last.status))&&last.status===a.data.status)last.notes=notes.value;}
    a.data.updatedAt=new Date().toISOString();save();
   };
   body.querySelectorAll('[data-edit]').forEach(el=>{
    if(el.dataset.edit==='IP LINK')el.addEventListener('input',()=>{el.value=el.value.replace(/[^0-9./]/g,'')});
    el.addEventListener('change',()=>{persist();log('Atividade editada pelo administrador',activityName(a)+' · '+el.dataset.edit,a.id)});
   });
-  $modal('#activityObservations')?.addEventListener('input',persist);
+  $modal('#saveNewObservation')?.addEventListener('click',()=>{
+   const notes=$modal('#activityObservations')?.value.trim();if(!notes)return toast('Digite uma observação para registrar');
+   preserveLegacyObservation(a);a.data.observations=notes;a.data.updatedAt=new Date().toISOString();recordActivityHistory(a,a.data.status,notes);
+   toast('Observação adicionada ao histórico');renderDetail();
+  });
   $modal('#activityStatus')?.addEventListener('change',()=>{
-   persist();const next=$modal('#activityStatus').value,prev=a.data.status;
+   persist();preserveLegacyObservation(a);const next=$modal('#activityStatus').value,prev=a.data.status;
    if(next===prev)return;
    a.data.status=next;
    if(['Migrada','Quebra'].includes(normStatus(next)))a.data.endAt=new Date().toISOString();
    else if(['Migrada','Quebra'].includes(normStatus(prev)))a.data.endAt=null;
-   recordActivityHistory(a,next,a.data.observations||'');
+   recordActivityHistory(a,next,'');
    log('Status alterado pelo administrador',activityName(a)+' · '+prev+' → '+next,a.id);
    save();toast('Status atualizado');renderDetail();
   });
   body.querySelectorAll('[data-history]').forEach(btn=>btn.addEventListener('click',()=>{
-   const h=(a.data.history||[])[Number(btn.dataset.history)];if(!h)return;
+   const h=activityHistoryEntries(a)[Number(btn.dataset.history)];if(!h)return;
    const pop=document.createElement('div');pop.className='history-overlay';
-   pop.innerHTML=`<div class="history-dialog" role="dialog" aria-modal="true"><h2>Histórico da atividade</h2><p>${esc(new Date(h.at).toLocaleString('pt-BR'))} · ${esc(h.analyst||'—')} · ${esc(h.status||'—')}</p><label>Observações registradas</label><div class="history-notes">${esc(h.notes||'Nenhuma observação registrada.')}</div><button type="button" class="secondary" id="closeHistory">Fechar</button></div>`;
+   pop.innerHTML=`<div class="history-dialog" role="dialog" aria-modal="true"><h2>Histórico da atividade</h2><p>${esc(historyReadableDate(h.at))} · ${esc(h.analyst||'Analista não identificado')} · ${esc(h.status||'Observação')}</p><label>Observações registradas</label><div class="history-notes">${esc(h.notes||'Nenhuma observação registrada.')}</div><button type="button" class="secondary" id="closeHistory">Fechar</button></div>`;
    document.body.appendChild(pop);pop.querySelector('#closeHistory').onclick=()=>pop.remove();pop.onclick=e=>{if(e.target===pop)pop.remove()};
   }));
   $modal('#adminDeleteActivity').onclick=()=>confirmDelete(a);
@@ -1182,19 +1266,18 @@ init();
 // Relatório flexível por colunas, status, analistas e formato.
 function formatReportDateTime(value){if(!value)return '';const d=new Date(value);return Number.isNaN(d.getTime())?'':d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})}
 function formatReportHistory(a){
- const history=Array.isArray(a.data?.history)?a.data.history:[];
+ const history=activityHistoryEntries(a);
  return history.map(entry=>{
-  const date=new Date(entry.at||'');
-  const when=Number.isNaN(date.getTime())?'Data não informada':date.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const when=historyReadableDate(entry.at);
   return `${when} · ${String(entry.analyst||entry.user||'Sem analista')} · ${String(entry.status||'Sem status')}`;
  }).join('\n');
 }
 function reportDateMatches(a,day){const d=a.data||{};if(!day)return true;return [d.startAt,d.endAt,d.createdAt,d.updatedAt,...(d.history||[]).map(h=>h.at)].some(t=>localDay(t)===day)||activityDate(a)===day}
-// A opção "Usar filtro da tela" respeita inclusive a pesquisa e os itens carregados.
+// A opção "Usar filtro da tela" usa TODOS os resultados da filtragem atual.
+// O limite de paginação da lista (200 itens por vez) é apenas visual.
 function reportVisibleActivities(activities){
- const byId=new Map(activities.map(a=>[String(a.id),a]));
- return [...document.querySelectorAll('#activityList .activity-line[data-view]')]
-  .map(line=>byId.get(line.dataset.view)).filter(Boolean);
+ const query=document.querySelector('#searchActivity')?.value||'';
+ return filteredHomeActivities(activities,query);
 }
 
 // O SheetJS da aplicação grava os dados; o JSZip aplica o estilo no XML do Excel.
@@ -1313,7 +1396,7 @@ function downloadReportFile(file){
 function informeSummary(selection){
  const counts=new Map();
  for(const a of selection.rows){
-  const status=String(a.data?.status||'Pendente');
+  const status=normStatus(a.data?.status);
   counts.set(status,(counts.get(status)||0)+1);
  }
  const order=['Pendente','Em andamento','Migrada','Quebra','Abandonada'];

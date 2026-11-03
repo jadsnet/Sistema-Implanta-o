@@ -26,9 +26,9 @@ vm.createContext(context);
 vm.runInContext(analystHelpers+helpers+reader,context,{filename:'app.js'});
 
 const realHeaders=['','Endereço de Instalação (base prévendas)','Município','Velocidade','MODELO EQUIPAMENTO','NETWORK','HOSTNAME','NET WORK PARA CLONAR','IP DEDICADO','ID VGR','STATUS SDWAN','DATA SDWAN','PARCEIRO','OPERADORA','HORARIO INICIO','HORÁRIO FIM','TEMPO DE DURAÇÃO','TKT NOC','STATUS NOC','OBS NOC','REDE LAN MERAKI','IP LAN MERAKI','SERIAL NUMBER','ANALISTA TÉCNICO','OBSERVAÇÃO'];
-const record=(id,status,day,partner,init,end,ticket,analyst,network='')=>{
+const record=(id,status,day,partner,init,end,ticket,analyst,network='',observation='')=>{
  const cells=Array(realHeaders.length).fill('');
- for(const [key,value] of Object.entries({'ID VGR':id,'STATUS SDWAN':status,'DATA SDWAN':day,'PARCEIRO':partner,'HORARIO INICIO':init,'HORÁRIO FIM':end,'TKT NOC':ticket,'ANALISTA TÉCNICO':analyst,'NETWORK':network}))cells[realHeaders.indexOf(key)]=value;
+ for(const [key,value] of Object.entries({'ID VGR':id,'STATUS SDWAN':status,'DATA SDWAN':day,'PARCEIRO':partner,'HORARIO INICIO':init,'HORÁRIO FIM':end,'TKT NOC':ticket,'ANALISTA TÉCNICO':analyst,'NETWORK':network,'OBSERVAÇÃO':observation}))cells[realHeaders.indexOf(key)]=value;
  return cells;
 };
 const workbook={SheetNames:['Resumo','Diario de Bordo_Copasa_16.10.26','Analistas'],Sheets:{
@@ -36,7 +36,7 @@ const workbook={SheetNames:['Resumo','Diario de Bordo_Copasa_16.10.26','Analista
  'Diario de Bordo_Copasa_16.10.26':{'!ref':'A1:XFC753',_rows:[realHeaders,
   record('2262813','Sem acionamento','14/10/26','Vivo Redes','','','','MAURICIO','rede original'),
   record('2264035','Sem Acionamento','14/10/26','Vivo Redes','','','','',''),
-  record('2262813','Quebra Cliente','15/10/26','','17:40:00','18:11:00','','MAURICIO',''),
+  record('2262813','Quebra Cliente','15/10/26','','17:40:00','18:11:00','','MAURICIO','','Quebra Técnica - Sem Técnico'),
   record('2262813','Migrado','16/10/26','DELFIA','10:11:00','11:35:00','1696060','JANAINA','rede nova'),
   record('2264035','Migrado','20/10/26','','11:06:00','11:56:00','1696410','JANAINA','')
  ]},
@@ -67,6 +67,7 @@ context.XLSX={read(){return workbook},utils:{
  assert.equal(activities[0].data.endAt,new Date(2026,9,16,11,35).toISOString());
  assert.equal(activities[0].data.row.NETWORK,'rede nova');
  assert.equal(activities[0].data.history.length,1,'não deve sobrescrever o histórico');
+ assert.ok(activities[0].data.importHistoryEvents.some(event=>event.status==='Quebra Cliente'&&event.analyst==='MAURICIO'&&event.notes==='Quebra Técnica - Sem Técnico'),'observações de quebras anteriores devem constar no histórico importado');
  assert.equal(activities[1].data.status,'Migrada');
  assert.equal(activities[1].data.row.Parceiro,'Vivo Redes','mantém o valor não vazio de linhas anteriores');
  assert.equal(activities[1].data.startAt,new Date(2026,9,20,11,6).toISOString());
