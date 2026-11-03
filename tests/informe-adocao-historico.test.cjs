@@ -29,7 +29,8 @@ assert.equal(context.calculateHomeStatusCounts(mock).Pendente,836,'o saldo de pe
 const result=context.informeSummary({p:{data:{name:'Copasa'}},rows:selection});
 assert.equal(result.total,1191);
 const counts=Object.fromEntries(result.statuses);
-assert.equal(counts.Pendente,822);assert.equal(counts.Migrada,355);assert.equal(counts.Quebra,14);
+assert.equal(counts.Pendente,836,'Pendentes no informe inclui as 14 atividades quebradas');
+assert.equal(counts.Migrada,355);assert.equal(counts.Quebra,14);
 context.filterOwner='status';context.filterStatus='Quebra';
 assert.equal(context.reportVisibleActivities(mock).length,14,'filtro Quebradas engloba todos os motivos');
 context.filterStatus='Pendente';

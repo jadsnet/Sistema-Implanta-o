@@ -198,15 +198,18 @@ function dateActivityMatches(a,day){
  return activityDate(a)===day||normStatus(statusAtDay(a,day))==='Em andamento';
 }
 function dateActivities(acts){const day=dashboardDay();return day?acts.filter(a=>dateActivityMatches(a,day)):acts}
-function calculateHomeStatusCounts(acts){
- const day=dashboardCustomActive()?'':dashboardDay();
- const own=dashboardCustomActive()&&customAnalyst?acts.filter(matchesAnalystFilter):acts;
+function calculateStatusCounts(acts,day='',analyst=''){
+ const analystKey=canonicalAnalystName(analyst).toLocaleLowerCase('pt-BR');
+ const own=analystKey?acts.filter(a=>canonicalAnalystName(a.data?.analystName).toLocaleLowerCase('pt-BR').includes(analystKey)):acts;
  return {
   Pendente:acts.filter(a=>matchesStatusCard(a,'Pendente',day)).length,
   'Em andamento':own.filter(a=>matchesStatusCard(a,'Em andamento',day)).length,
   Migrada:own.filter(a=>matchesStatusCard(a,'Migrada',day)).length,
   Quebra:own.filter(a=>matchesStatusCard(a,'Quebra',day)).length
  };
+}
+function calculateHomeStatusCounts(acts){
+ return calculateStatusCounts(acts,dashboardCustomActive()?'':dashboardDay(),dashboardCustomActive()?customAnalyst:'');
 }
 function dashboardStageActivities(acts){
  const day=dashboardCustomActive()?'':dashboardDay(),own=dashboardCustomActive()&&customAnalyst?acts.filter(matchesAnalystFilter):acts;
@@ -441,14 +444,15 @@ function filteredHomeActivities(projectActs,search=''){
  if(customOn&&!q)acts=acts.filter(a=>matchesAnalystFilter(a)&&matchesStatusOption(a.data.status||'Pendente',customStatus));
  return newestActivities(acts);
 }
-function listDisplayStatus(a){
- const day=dashboardCustomActive()?'':dashboardDay();if(!day)return a.data?.status||'Pendente';
+function displayStatusAtDate(a,day,category='Todos'){
+ if(!day)return a.data?.status||'Pendente';
  const events=activityTimeline(a).filter(e=>e.day===day);
- const category=['Migrada','Quebra'].includes(filterStatus)?filterStatus:null;
- const relevant=events.filter(e=>category?normStatus(e.status)===category:['Migrada','Quebra'].includes(normStatus(e.status)));
+ const relevantCategory=['Migrada','Quebra'].includes(category)?category:null;
+ const relevant=events.filter(e=>relevantCategory?normStatus(e.status)===relevantCategory:['Migrada','Quebra'].includes(normStatus(e.status)));
  if(relevant.length)return relevant[relevant.length-1].status;
  return statusAtDay(a,day);
 }
+function listDisplayStatus(a){return displayStatusAtDate(a,dashboardCustomActive()?'':dashboardDay(),filterStatus)}
 function listCompletionLabel(a,status){
  const day=dashboardCustomActive()?'':dashboardDay(),kind=normStatus(status);
  if(day&&['Migrada','Quebra'].includes(kind)&&activityTimeline(a).some(e=>e.day===day&&normStatus(e.status)===kind)){
@@ -1387,7 +1391,18 @@ function formatReportHistory(a){
   return `${when} · ${String(entry.analyst||entry.user||'Sem analista')} · ${String(entry.status||'Sem status')}`;
  }).join('\n');
 }
-function reportDateMatches(a,day){const d=a.data||{};if(!day)return true;return [d.startAt,d.endAt,d.createdAt,d.updatedAt,...(d.history||[]).map(h=>h.at)].some(t=>localDay(t)===day)||activityDate(a)===day}
+function reportDateMatches(a,day){return !day||dateActivityMatches(a,day)}
+function reportPeriodLabel(period,day=''){
+ const formatDay=value=>{const d=movementDay(value);return d?d.split('-').reverse().join('/'):''};
+ if(period==='all')return 'Todas as datas · totais atuais do projeto';
+ if(period==='specific')return 'Data selecionada: '+formatDay(day);
+ let label=dashboardCustomActive()?'Filtro da tela: personalizado':dateFilter==='other'?'Filtro da tela: Outro dia · '+formatDay(selectedDate):
+  dateFilter==='today'?'Filtro da tela: Hoje · '+formatDay(localDay(new Date())):'Filtro da tela: Total geral';
+ if(dashboardCustomActive()&&customAnalyst)label+=' · Analista: '+canonicalAnalystName(customAnalyst);
+ if(dashboardCustomActive()&&customStatus!=='Todos')label+=' · Status customizado: '+customStatus;
+ if(filterStatus!=='Todos')label+=' · Cartão: '+filterStatus;
+ return label;
+}
 // A opção "Usar filtro da tela" usa TODOS os resultados da filtragem atual.
 // O limite de paginação da lista (200 itens por vez) é apenas visual.
 function reportVisibleActivities(activities){
@@ -1509,33 +1524,29 @@ function downloadReportFile(file){
  setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
 function informeSummary(selection){
- const counts=new Map();
- for(const a of selection.rows){
-  const status=normStatus(a.data?.status);
-  counts.set(status,(counts.get(status)||0)+1);
- }
- const order=['Pendente','Em andamento','Migrada','Quebra','Abandonada'];
- const statuses=[...counts].sort((a,b)=>{
-  const ai=order.indexOf(a[0]),bi=order.indexOf(b[0]);
-  return (ai<0?99:ai)-(bi<0?99:bi)||a[0].localeCompare(b[0],'pt-BR');
- });
- return {statuses,total:selection.rows.length,projectName:getName(selection.p),date:new Date().toLocaleDateString('pt-BR')};
+ // O total do anexo representa as linhas exportadas. Já os quatro cartões
+ // reproduzem os indicadores do painel, inclusive o saldo histórico pendente,
+ // que NÃO é a soma de atividades selecionadas naquele dia.
+ const counts=selection.summaryCounts||calculateStatusCounts(selection.rows);
+ const statuses=['Pendente','Em andamento','Migrada','Quebra'].map(key=>[key,counts[key]||0]);
+ return {statuses,total:selection.rows.length,projectName:getName(selection.p),
+  date:new Date().toLocaleDateString('pt-BR'),periodLabel:selection.periodLabel||'Conforme filtros do relatório'};
 }
 function informePanelHtml(summary){
  const counts=summary.statuses.map(([name,count])=>{
   const tone=normStatus(name)==='Migrada'?'#56cf90':normStatus(name)==='Quebra'?'#ffa875':normStatus(name)==='Em andamento'?'#b58bea':'#82b2f3';
   return '<td style="padding:5px;vertical-align:top"><div style="border-radius:9px;border-left:4px solid '+tone+';background:#614777;padding:11px 16px;min-width:110px;box-sizing:border-box">'+
-   '<div style="color:#ffffff;font-size:12px;font-weight:bold">'+esc(name)+'</div><div style="color:#ffffff;font-size:24px;font-weight:bold;margin-top:6px">'+count+'</div></div></td>';
+   '<div style="color:#ffffff;font-size:12px;font-weight:bold">'+esc(name==='Pendente'?'Pendentes (saldo)':name==='Quebra'?'Quebradas':name==='Migrada'?'Migradas':name)+'</div><div style="color:#ffffff;font-size:24px;font-weight:bold;margin-top:6px">'+count+'</div></div></td>';
  }).join('');
  return '<section class="informe-body-panel" contenteditable="false" style="background:#39244f;color:#fff;border:0;box-shadow:4px 7px 17px rgba(20,6,31,.36);border-radius:13px;padding:17px 16px;margin:18px 0">'+
   '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">'+
   '<div><div style="font-size:10px;color:#d8abf2;letter-spacing:1px;font-weight:bold">PAINEL DE ATIVIDADES</div>'+
   '<div style="font-size:20px;font-weight:bold;margin:5px 0">'+esc(summary.projectName)+'</div>'+
-  '<div style="font-size:12px;color:#e5d1ee">'+esc(summary.date)+' · conforme filtros do relatório</div></div>'+
+  '<div style="font-size:12px;color:#e5d1ee">'+esc(summary.periodLabel)+'</div></div>'+
   '<div style="background:#8629c3;color:white;text-align:center;border-radius:10px;min-width:70px;padding:8px 12px">'+
-  '<div style="font-size:11px">Total</div><div style="font-size:27px;font-weight:bold">'+summary.total+'</div></div></div>'+
+  '<div style="font-size:11px">No anexo</div><div style="font-size:27px;font-weight:bold">'+summary.total+'</div></div></div>'+
   '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:13px -5px 8px;max-width:100%;border-collapse:separate"><tr>'+counts+'</tr></table>'+
-  '<p style="font-size:11px;color:#e3d1ec;margin:7px 0 0">O relatório analítico de '+summary.total+' atividade(s) está anexado a esta mensagem.</p>'+
+  '<p style="font-size:11px;color:#e3d1ec;margin:7px 0 0">O anexo contém '+summary.total+' atividade(s). Pendentes é o saldo de não migradas até a data, incluindo quebras e atividades em andamento; por isso, os cartões não devem ser somados.</p>'+
   '</section>';
 }
 function informeEditorContent(editor){
@@ -1741,20 +1752,22 @@ function openActivityReport(){
  const standard=[['ID VGR',a=>a.data.row?.['ID VGR']||''],['ID link',a=>a.data.ed?.idDedicado||a.data.row?.['ID DEDICADO']||''],['Nome da localidade',a=>a.data.row?.UNIDADE||a.data.row?.MUNICIPIO||''],['Nome do analista da atividade',a=>canonicalAnalystName(a.data.analystName)],['Data',a=>{let d=activityDate(a)||'';return /^\d{4}-\d{2}-\d{2}$/.test(d)?d.split('-').reverse().join('/'):d}],['Status',a=>a.data.status||'Pendente'],['Observação',a=>a.data.observations||a.data.observacoes||a.data.observacao||''],['Horário de início',a=>formatReportDateTime(a.data.startAt)],['Horário de término',a=>formatReportDateTime(a.data.endAt)],['Histórico',formatReportHistory]];
  const keys=[...new Set([...(p?.data?.activityTemplate||[]),...(p?.data?.extraFields||[]).map(f=>typeof f==='string'?f:f.name),...acts.flatMap(a=>Object.keys(a.data.row||{}))])].filter(Boolean);
  const columns=[...standard,...keys.filter(k=>!standard.some(c=>c[0].toLocaleUpperCase('pt-BR')===k.toLocaleUpperCase('pt-BR'))).map(k=>[k,a=>a.data.row?.[k]??a.data.ed?.[k]??''])];
- const statuses=[...new Set(['Pendente',...activeStatuses,'Migrada','Quebra','Abandonada',...acts.map(a=>a.data.status).filter(Boolean)])];
+ const statuses=[...new Set(['Pendente','Em andamento',...activeStatuses,'Migrada','Quebra',...breakStatuses,'Abandonada',...acts.map(a=>a.data.status).filter(Boolean)])];
  const analysts=[...new Set(acts.map(a=>canonicalAnalystName(a.data.analystName)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const preferenceKey='gi_report_prefs_'+(p?.id||'')+'_'+currentUser().trim().toLowerCase();
   let preferences={};try{preferences=JSON.parse(localStorage.getItem(preferenceKey)||'{}')||{}}catch(e){preferences={}}
  const overlay=document.createElement('div');overlay.id='activityReportOverlay';overlay.className='report-overlay';
  const group=(items,cls)=>`<div class="report-options ${cls}">${items.map((label,i)=>`<label><input type="checkbox" value="${i}" ${cls==='report-fields'&&label==='Histórico'?'':'checked'}><span>${esc(label)}</span></label>`).join('')}</div>`;
- overlay.innerHTML=`<div class="report-dialog report-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="reportTitle"><div class="report-dialog-head"><h3 id="reportTitle">Extrair relatório</h3><button type="button" class="report-close" aria-label="Fechar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><p class="small muted">Escolha os campos e a origem das atividades. Suas opções ficam salvas neste navegador.</p><div class="report-date-filter"><label>Período <select id="reportPeriod"><option value="screen">Usar filtro da tela</option><option value="all">Todas as datas</option><option value="specific">Data específica</option></select></label><label class="report-date-picker" id="reportDatePicker">Selecionar data<input type="date" id="reportSelectedDate"></label><p class="report-screen-note small muted" id="reportScreenNote">O relatório seguirá exatamente a lista visível na tela, com pesquisa, status e analistas aplicados, na mesma ordem. Os filtros adicionais abaixo não serão usados.</p></div><div class="report-group"><div class="report-group-title"><b>Campos do projeto</b><label><input type="checkbox" class="report-toggle" data-target="report-fields" checked> Selecionar todos</label></div>${group(columns.map(c=>c[0]),'report-fields')}</div><div class="report-group report-optional-filter"><div class="report-group-title"><b>Status</b><label><input type="checkbox" class="report-toggle" data-target="report-statuses" checked> Selecionar todos</label></div>${group(statuses,'report-statuses')}</div><div class="report-group report-optional-filter"><div class="report-group-title"><b>Analistas</b><label><input type="checkbox" class="report-toggle" data-target="report-analysts" checked> Selecionar todos</label></div>${group([...analysts,'Sem analista'],'report-analysts')}</div><div class="report-dialog-actions"><label class="report-format-label">Formato <select id="reportFormat"><option value="xlsx">XLSX</option><option value="xls">XLS</option><option value="xlsm">XLSM</option><option value="csv">CSV</option></select></label><button type="button" class="secondary" id="cancelActivityReport">Cancelar</button><button type="button" id="downloadActivityReport">Baixar relatório</button></div><p class="small muted report-format-note">Cabeçalho roxo e fonte branca: XLSX e XLSM. XLS antigo e CSV não recebem cores.</p></div>`;
+ overlay.innerHTML=`<div class="report-dialog report-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="reportTitle"><div class="report-dialog-head"><h3 id="reportTitle">Extrair relatório</h3><button type="button" class="report-close" aria-label="Fechar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><p class="small muted">Escolha os campos e a origem das atividades. Suas opções ficam salvas neste navegador.</p><div class="report-date-filter"><label>Período <select id="reportPeriod"><option value="screen">Usar filtro da tela</option><option value="all">Todas as datas</option><option value="specific">Data específica</option></select></label><label class="report-date-picker" id="reportDatePicker">Selecionar data<input type="date" id="reportSelectedDate"></label><p class="report-screen-note small muted" id="reportScreenNote">O relatório seguirá todos os resultados dos filtros ativos no painel. No informe, os cartões reproduzem os indicadores exibidos na tela, inclusive o saldo Pendentes; o total do anexo corresponde às atividades listadas.</p></div><div class="report-group"><div class="report-group-title"><b>Campos do projeto</b><label><input type="checkbox" class="report-toggle" data-target="report-fields" checked> Selecionar todos</label></div>${group(columns.map(c=>c[0]),'report-fields')}</div><div class="report-group report-optional-filter"><div class="report-group-title"><b>Status</b><label><input type="checkbox" class="report-toggle" data-target="report-statuses" checked> Selecionar todos</label></div>${group(statuses,'report-statuses')}</div><div class="report-group report-optional-filter"><div class="report-group-title"><b>Analistas</b><label><input type="checkbox" class="report-toggle" data-target="report-analysts" checked> Selecionar todos</label></div>${group([...analysts,'Sem analista'],'report-analysts')}</div><div class="report-dialog-actions"><label class="report-format-label">Formato <select id="reportFormat"><option value="xlsx">XLSX</option><option value="xls">XLS</option><option value="xlsm">XLSM</option><option value="csv">CSV</option></select></label><button type="button" class="secondary" id="cancelActivityReport">Cancelar</button><button type="button" id="downloadActivityReport">Baixar relatório</button></div><p class="small muted report-format-note">Cabeçalho roxo e fonte branca: XLSX e XLSM. XLS antigo e CSV não recebem cores.</p></div>`;
  document.body.appendChild(overlay);
  const sendBtn=document.createElement('button');sendBtn.id='reportSendInforme';sendBtn.type='button';sendBtn.innerHTML='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg> Enviar informe';
  overlay.querySelector('.report-date-filter').insertBefore(sendBtn,overlay.querySelector('#reportScreenNote'));
   const rep=(cls,names)=>{const selected=preferences[cls];if(!Array.isArray(selected))return;overlay.querySelectorAll('.'+cls+' input').forEach((el,i)=>{el.checked=selected.includes(names[i])})};
   rep('report-fields',columns.map(c=>c[0]));rep('report-statuses',statuses);rep('report-analysts',[...analysts,'Sem analista']);
   overlay.querySelector('#reportFormat').value=['xlsx','xls','xlsm','csv'].includes(preferences.format)?preferences.format:'xlsx';
-  overlay.querySelector('#reportPeriod').value=['screen','all','specific'].includes(preferences.period)?preferences.period:'screen';
+  // Ao abrir o relatório, priorize sempre os filtros atualmente ativos no painel.
+  // Outras opções de período continuam disponíveis para escolha explícita.
+  overlay.querySelector('#reportPeriod').value='screen';
   overlay.querySelector('#reportSelectedDate').value=preferences.day||localDay(new Date());
   const updateReportMode=()=>{
    const mode=overlay.querySelector('#reportPeriod').value,onScreen=mode==='screen';
@@ -1782,12 +1795,21 @@ function openActivityReport(){
   const ci=indices('report-fields'),si=indices('report-statuses'),ai=indices('report-analysts');
   const period=overlay.querySelector('#reportPeriod').value;
   if(!ci.length||(period!=='screen'&&(!si.length||!ai.length)))return toast('Selecione ao menos um campo, status e analista.');
-  const chosen=ci.map(i=>columns[i]);const statusSet=new Set(si.map(i=>statuses[i]));const analystSet=new Set(ai.map(i=>[...analysts,'Sem analista'][i]));
   const day=overlay.querySelector('#reportSelectedDate').value;
   if(period==='specific'&&!day)return toast('Selecione a data para extrair o relatório');
-  const rows=period==='screen'?reportVisibleActivities(acts):newestActivities((period==='all'?acts:acts.filter(a=>reportDateMatches(a,day))).filter(a=>statusSet.has(a.data.status||'Pendente')&&analystSet.has(canonicalAnalystName(a.data.analystName)||'Sem analista')));
+  const chosen=ci.map(i=>columns[i][0]==='Status'?['Status',a=>period==='screen'?listDisplayStatus(a):period==='specific'?displayStatusAtDate(a,day):a.data.status||'Pendente']:columns[i]);
+  const statusSet=new Set(si.map(i=>statuses[i])),analystSet=new Set(ai.map(i=>[...analysts,'Sem analista'][i]));
+  const matchesAnalyst=a=>analystSet.has(canonicalAnalystName(a.data.analystName)||'Sem analista');
+  const matchesReportStatus=a=>{
+   const status=period==='specific'?displayStatusAtDate(a,day):a.data.status||'Pendente';
+   return statusSet.has(status)||normStatus(status)==='Quebra'&&statusSet.has('Quebra')||
+    normStatus(status)==='Em andamento'&&statusSet.has('Em andamento');
+  };
+  const rows=period==='screen'?reportVisibleActivities(acts):newestActivities((period==='all'?acts:acts.filter(a=>reportDateMatches(a,day))).filter(a=>matchesReportStatus(a)&&matchesAnalyst(a)));
   if(!rows.length)return toast(period==='screen'?'Nenhuma atividade exibida na tela para exportar.':'Nenhuma atividade corresponde aos filtros escolhidos.');
-  return {p,rows,chosen,period,day};
+  const summaryCounts=period==='screen'?calculateHomeStatusCounts(acts):
+   calculateStatusCounts(acts.filter(matchesAnalyst),period==='specific'?day:'');
+  return {p,rows,chosen,period,day,summaryCounts,periodLabel:reportPeriodLabel(period,day)};
  };
  overlay.querySelector('#reportSendInforme').onclick=()=>{
   const selection=collectReportSelection();
